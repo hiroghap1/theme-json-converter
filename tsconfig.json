@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "es2017",
+        "lib": [
+            "es6",
+            "dom",
+            "dom.iterable"
+        ],
+        "strict": true,
+        "typeRoots": [
+            "./node_modules/@types",
+            "./node_modules/@figma"
+        ],
+        "jsx": "react-jsx",
+        "moduleResolution": "bundler",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "isolatedModules": true
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "vite.config.ts"
+    ]
+}

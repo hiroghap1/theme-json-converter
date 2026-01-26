@@ -1,0 +1,31 @@
+{
+  "name": "theme-json-setting",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:ui && npm run build:code",
+    "build:ui": "vite build",
+    "build:code": "esbuild src/code/index.ts --bundle --outfile=dist/code.js --format=iife --target=es2015",
+    "watch": "npm run watch:ui & npm run watch:code",
+    "watch:ui": "vite build --watch",
+    "watch:code": "esbuild src/code/index.ts --bundle --outfile=dist/code.js --format=iife --target=es2015 --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.121.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "esbuild": "^0.25.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-singlefile": "^2.3.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+    "name": "theme-json Converter",
+    "id": "theme-json-converter",
+    "api": "1.0.0",
+    "main": "dist/code.js",
+    "ui": "dist/src/ui/ui.html",
+    "capabilities": [],
+    "enableProposedApi": false,
+    "editorType": [
+        "figma"
+    ],
+    "networkAccess": {
+        "allowedDomains": [
+            "*"
+        ],
+        "reasoning": "This plugin needs to access external resources defined in theme.json such as fonts or images."
+    }
+}
