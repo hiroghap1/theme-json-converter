@@ -1,9 +1,10 @@
 {
     "name": "WP theme-json Converter",
-    "id": "theme-json-converter",
+    "id": "1597529068216614729",
     "api": "1.0.0",
     "main": "dist/code.js",
     "ui": "dist/src/ui/ui.html",
+    "documentAccess": "dynamic-page",
     "capabilities": [],
     "enableProposedApi": false,
     "editorType": [
