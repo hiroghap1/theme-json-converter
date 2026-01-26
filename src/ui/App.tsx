@@ -103,7 +103,7 @@ const App: React.FC = () => {
         <div style={styles.container}>
             {/* Header */}
             <div style={styles.header}>
-                <h1 style={styles.title}>Theme JSON</h1>
+                <h1 style={styles.title}>WP theme-json</h1>
                 <span style={styles.subtitle}>WordPress theme.json Converter</span>
             </div>
 

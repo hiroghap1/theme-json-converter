@@ -1,5 +1,5 @@
 {
-    "name": "theme-json Converter",
+    "name": "WP theme-json Converter",
     "id": "theme-json-converter",
     "api": "1.0.0",
     "main": "dist/code.js",
