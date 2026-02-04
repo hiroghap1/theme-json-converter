@@ -40,11 +40,37 @@ const GenerateIcon: React.FC<{ color?: string; size?: number }> = ({ color = 'cu
 
 type TabType = 'import' | 'export' | 'generate';
 
+interface OptionSetting {
+    include: boolean;  // 出力するかどうか
+    value: boolean;    // true/false の値
+}
+
+interface ExportOptions {
+    version: number;
+    appearanceTools: OptionSetting;
+    defaultPalette: OptionSetting;
+    defaultGradients: OptionSetting;
+    defaultDuotone: OptionSetting;
+    defaultFontSizes: OptionSetting;
+    defaultSpacingSizes: OptionSetting;
+}
+
 const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('import');
     const [version, setVersion] = useState<number>(3);
     const [status, setStatus] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Export options
+    const [exportOptions, setExportOptions] = useState<ExportOptions>({
+        version: 3,
+        appearanceTools: { include: true, value: true },
+        defaultPalette: { include: true, value: false },
+        defaultGradients: { include: true, value: false },
+        defaultDuotone: { include: true, value: false },
+        defaultFontSizes: { include: true, value: false },
+        defaultSpacingSizes: { include: true, value: false },
+    });
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -84,8 +110,19 @@ const App: React.FC = () => {
     }, []);
 
     const handleExport = () => {
-        parent.postMessage({ pluginMessage: { type: 'export-theme-json' } }, '*');
+        parent.postMessage({ pluginMessage: { type: 'export-theme-json', payload: exportOptions } }, '*');
         setStatus('エクスポート中...');
+    };
+
+    const handleVersionChange = (value: number) => {
+        setExportOptions(prev => ({ ...prev, version: value }));
+    };
+
+    const handleOptionSettingChange = (key: Exclude<keyof ExportOptions, 'version'>, field: 'include' | 'value', value: boolean) => {
+        setExportOptions(prev => ({
+            ...prev,
+            [key]: { ...prev[key], [field]: value }
+        }));
     };
 
     const handleGenerate = () => {
@@ -153,6 +190,249 @@ const App: React.FC = () => {
                         <p style={styles.description}>
                             Figmaの現在のバリアブルとスタイルからtheme.jsonを生成してダウンロードします。
                         </p>
+                        
+                        <div style={styles.versionSelector}>
+                            <label style={styles.label}>theme.jsonバージョン:</label>
+                            <select
+                                value={exportOptions.version}
+                                onChange={(e) => handleVersionChange(Number(e.target.value))}
+                                style={styles.select}
+                            >
+                                <option value={1}>Version 1 (WordPress 5.8+)</option>
+                                <option value={2}>Version 2 (WordPress 5.9+)</option>
+                                <option value={3}>Version 3 (WordPress 6.6+)</option>
+                            </select>
+                        </div>
+
+                        <div style={styles.optionsSection}>
+                            <p style={styles.optionsSectionTitle}>設定オプション:</p>
+                            
+                            <div style={styles.optionRow}>
+                                <label style={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={exportOptions.appearanceTools.include}
+                                        onChange={(e) => handleOptionSettingChange('appearanceTools', 'include', e.target.checked)}
+                                        style={styles.checkbox}
+                                    />
+                                    appearanceTools を出力
+                                </label>
+                                {exportOptions.appearanceTools.include && (
+                                    <div style={styles.valueSelector}>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="appearanceToolsValue"
+                                                checked={exportOptions.appearanceTools.value === true}
+                                                onChange={() => handleOptionSettingChange('appearanceTools', 'value', true)}
+                                                style={styles.radio}
+                                            />
+                                            true
+                                        </label>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="appearanceToolsValue"
+                                                checked={exportOptions.appearanceTools.value === false}
+                                                onChange={() => handleOptionSettingChange('appearanceTools', 'value', false)}
+                                                style={styles.radio}
+                                            />
+                                            false
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <p style={styles.optionGroupTitle}>Color設定:</p>
+                            
+                            <div style={styles.optionRow}>
+                                <label style={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={exportOptions.defaultPalette.include}
+                                        onChange={(e) => handleOptionSettingChange('defaultPalette', 'include', e.target.checked)}
+                                        style={styles.checkbox}
+                                    />
+                                    defaultPalette を出力
+                                </label>
+                                {exportOptions.defaultPalette.include && (
+                                    <div style={styles.valueSelector}>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultPaletteValue"
+                                                checked={exportOptions.defaultPalette.value === true}
+                                                onChange={() => handleOptionSettingChange('defaultPalette', 'value', true)}
+                                                style={styles.radio}
+                                            />
+                                            true
+                                        </label>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultPaletteValue"
+                                                checked={exportOptions.defaultPalette.value === false}
+                                                onChange={() => handleOptionSettingChange('defaultPalette', 'value', false)}
+                                                style={styles.radio}
+                                            />
+                                            false
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={styles.optionRow}>
+                                <label style={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={exportOptions.defaultGradients.include}
+                                        onChange={(e) => handleOptionSettingChange('defaultGradients', 'include', e.target.checked)}
+                                        style={styles.checkbox}
+                                    />
+                                    defaultGradients を出力
+                                </label>
+                                {exportOptions.defaultGradients.include && (
+                                    <div style={styles.valueSelector}>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultGradientsValue"
+                                                checked={exportOptions.defaultGradients.value === true}
+                                                onChange={() => handleOptionSettingChange('defaultGradients', 'value', true)}
+                                                style={styles.radio}
+                                            />
+                                            true
+                                        </label>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultGradientsValue"
+                                                checked={exportOptions.defaultGradients.value === false}
+                                                onChange={() => handleOptionSettingChange('defaultGradients', 'value', false)}
+                                                style={styles.radio}
+                                            />
+                                            false
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={styles.optionRow}>
+                                <label style={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={exportOptions.defaultDuotone.include}
+                                        onChange={(e) => handleOptionSettingChange('defaultDuotone', 'include', e.target.checked)}
+                                        style={styles.checkbox}
+                                    />
+                                    defaultDuotone を出力
+                                </label>
+                                {exportOptions.defaultDuotone.include && (
+                                    <div style={styles.valueSelector}>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultDuotoneValue"
+                                                checked={exportOptions.defaultDuotone.value === true}
+                                                onChange={() => handleOptionSettingChange('defaultDuotone', 'value', true)}
+                                                style={styles.radio}
+                                            />
+                                            true
+                                        </label>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultDuotoneValue"
+                                                checked={exportOptions.defaultDuotone.value === false}
+                                                onChange={() => handleOptionSettingChange('defaultDuotone', 'value', false)}
+                                                style={styles.radio}
+                                            />
+                                            false
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <p style={styles.optionGroupTitle}>Typography設定:</p>
+                            
+                            <div style={styles.optionRow}>
+                                <label style={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={exportOptions.defaultFontSizes.include}
+                                        onChange={(e) => handleOptionSettingChange('defaultFontSizes', 'include', e.target.checked)}
+                                        style={styles.checkbox}
+                                    />
+                                    defaultFontSizes を出力
+                                </label>
+                                {exportOptions.defaultFontSizes.include && (
+                                    <div style={styles.valueSelector}>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultFontSizesValue"
+                                                checked={exportOptions.defaultFontSizes.value === true}
+                                                onChange={() => handleOptionSettingChange('defaultFontSizes', 'value', true)}
+                                                style={styles.radio}
+                                            />
+                                            true
+                                        </label>
+                                        <label style={styles.radioLabel}>
+                                            <input
+                                                type="radio"
+                                                name="defaultFontSizesValue"
+                                                checked={exportOptions.defaultFontSizes.value === false}
+                                                onChange={() => handleOptionSettingChange('defaultFontSizes', 'value', false)}
+                                                style={styles.radio}
+                                            />
+                                            false
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            {exportOptions.version >= 2 && (
+                                <>
+                                    <p style={styles.optionGroupTitle}>Spacing設定:</p>
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.defaultSpacingSizes.include}
+                                                onChange={(e) => handleOptionSettingChange('defaultSpacingSizes', 'include', e.target.checked)}
+                                                style={styles.checkbox}
+                                            />
+                                            defaultSpacingSizes を出力
+                                        </label>
+                                        {exportOptions.defaultSpacingSizes.include && (
+                                            <div style={styles.valueSelector}>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="defaultSpacingSizesValue"
+                                                        checked={exportOptions.defaultSpacingSizes.value === true}
+                                                        onChange={() => handleOptionSettingChange('defaultSpacingSizes', 'value', true)}
+                                                        style={styles.radio}
+                                                    />
+                                                    true
+                                                </label>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="defaultSpacingSizesValue"
+                                                        checked={exportOptions.defaultSpacingSizes.value === false}
+                                                        onChange={() => handleOptionSettingChange('defaultSpacingSizes', 'value', false)}
+                                                        style={styles.radio}
+                                                    />
+                                                    false
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
                         <button style={styles.primaryButton} onClick={handleExport}>
                             <DownloadIcon color="white" size={18} />
                             theme.json をダウンロード
@@ -371,6 +651,67 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '13px',
         color: '#666',
         lineHeight: 1.8,
+    },
+    optionsSection: {
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+    },
+    optionsSectionTitle: {
+        margin: '0 0 4px 0',
+        fontSize: '13px',
+        fontWeight: 600,
+        color: '#333',
+    },
+    optionGroupTitle: {
+        margin: '8px 0 4px 0',
+        fontSize: '12px',
+        fontWeight: 600,
+        color: '#666',
+    },
+    checkboxLabel: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '13px',
+        color: '#333',
+        cursor: 'pointer',
+    },
+    checkbox: {
+        width: '16px',
+        height: '16px',
+        cursor: 'pointer',
+    },
+    optionRow: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        padding: '8px 0',
+        borderBottom: '1px solid #eee',
+    },
+    valueSelector: {
+        display: 'flex',
+        gap: '16px',
+        marginLeft: '24px',
+        padding: '4px 8px',
+        backgroundColor: '#f0f0f0',
+        borderRadius: '4px',
+    },
+    radioLabel: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '12px',
+        color: '#555',
+        cursor: 'pointer',
+    },
+    radio: {
+        width: '14px',
+        height: '14px',
+        cursor: 'pointer',
     },
 };
 

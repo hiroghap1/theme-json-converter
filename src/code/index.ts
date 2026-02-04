@@ -16,21 +16,22 @@ async function importThemeJson(theme: any) {
     // 1. Process Colors -> Variables
     if (theme.settings?.color?.palette) {
         const collectionName = "Theme Colors";
-        let collection = figma.variables.getLocalVariableCollections().find(c => c.name === collectionName);
+        const collections = await figma.variables.getLocalVariableCollectionsAsync();
+        let collection = collections.find(c => c.name === collectionName);
         if (!collection) {
             collection = figma.variables.createVariableCollection(collectionName);
         }
 
+        const allVariables = await figma.variables.getLocalVariablesAsync();
+        
         for (const colorItem of theme.settings.color.palette) {
             const rgb = hexToRgb(colorItem.color);
             if (rgb) {
-                // Check if variable exists
-                let variable = figma.variables.getLocalVariables().find(v => v.variableCollectionId === collection!.id && v.name === colorItem.name);
+                let variable = allVariables.find(v => v.variableCollectionId === collection!.id && v.name === colorItem.name);
                 if (!variable) {
-                    variable = figma.variables.createVariable(colorItem.name, collection.id, "COLOR");
+                    variable = figma.variables.createVariable(colorItem.name, collection, "COLOR");
                 }
 
-                // Update value for the default mode
                 const modes = collection.modes;
                 if (modes.length > 0) {
                     variable.setValueForMode(modes[0].modeId, rgb);
@@ -40,34 +41,31 @@ async function importThemeJson(theme: any) {
         figma.notify(`Imported ${theme.settings.color.palette.length} colors to Variables.`);
     }
 
-    // 2. Process Font Sizes -> Text Styles (Simple implementation)
+    // 2. Process Font Sizes -> Text Styles
     if (theme.settings?.typography?.fontSizes) {
-        await figma.loadFontAsync({ family: "Inter", style: "Regular" }); // Default fallback
+        await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+
+        const textStyles = await figma.getLocalTextStylesAsync();
 
         for (const fontSize of theme.settings.typography.fontSizes) {
             let size = parseFloat(fontSize.size);
-            // Handle "rem" - assuming 16px base. deeply simplified.
             if (fontSize.size.endsWith('rem')) {
                 size = parseFloat(fontSize.size) * 16;
             } else if (fontSize.size.endsWith('px')) {
                 size = parseFloat(fontSize.size);
             } else {
-                // Try parsing anyway (e.g. raw number)
                 const parsed = parseFloat(fontSize.size);
                 if (!isNaN(parsed)) size = parsed;
             }
 
             if (!isNaN(size)) {
                 const styleName = `Typography/${fontSize.name}`;
-                let style = figma.getLocalTextStyles().find(s => s.name === styleName);
+                let style = textStyles.find(s => s.name === styleName);
                 if (!style) {
                     style = figma.createTextStyle();
                     style.name = styleName;
                 }
                 style.fontSize = size;
-                // Note: Font family setting requires loading that specific font, which is complex.
-                // For now, we leave the font family as default (Inter) or whatever `createTextStyle` uses,
-                // or we would need to try to load the font specified in theme.json if possible.
             }
         }
         figma.notify(`Imported typography sizes.`);
@@ -84,27 +82,73 @@ function rgbToHex(r: number, g: number, b: number): string {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-async function exportThemeJson() {
+interface OptionSetting {
+    include: boolean;
+    value: boolean;
+}
+
+interface ExportOptions {
+    version: number;
+    appearanceTools: OptionSetting;
+    defaultPalette: OptionSetting;
+    defaultGradients: OptionSetting;
+    defaultDuotone: OptionSetting;
+    defaultFontSizes: OptionSetting;
+    defaultSpacingSizes: OptionSetting;
+}
+
+function getSchemaUrl(version: number): string {
+    switch (version) {
+        case 1: return "https://schemas.wp.org/wp/5.8/theme.json";
+        case 2: return "https://schemas.wp.org/wp/5.9/theme.json";
+        case 3: return "https://schemas.wp.org/wp/6.6/theme.json";
+        default: return "https://schemas.wp.org/wp/6.6/theme.json";
+    }
+}
+
+async function exportThemeJson(options?: ExportOptions) {
+    const version = options?.version || 3;
+    
     const theme: any = {
-        $schema: "https://schemas.wp.org/wp/6.6/theme.json",
-        version: 3,
-        settings: {
-            color: { palette: [] },
-            typography: { fontSizes: [] },
-            spacing: { spacingSizes: [] }
-        }
+        $schema: getSchemaUrl(version),
+        version: version,
+        settings: {}
     };
 
-    // 1. Export Colors from Variables (find collections that start with "Theme Colors")
-    const colorCollections = figma.variables.getLocalVariableCollections().filter(c => c.name.startsWith("Theme Colors"));
+    // Add appearanceTools if enabled (version 2+)
+    if (version >= 2 && options?.appearanceTools?.include) {
+        theme.settings.appearanceTools = options.appearanceTools.value;
+    }
+
+    // Color settings
+    theme.settings.color = {};
+    
+    if (options) {
+        if (options.defaultPalette?.include) {
+            theme.settings.color.defaultPalette = options.defaultPalette.value;
+        }
+        if (options.defaultGradients?.include) {
+            theme.settings.color.defaultGradients = options.defaultGradients.value;
+        }
+        if (options.defaultDuotone?.include) {
+            theme.settings.color.defaultDuotone = options.defaultDuotone.value;
+        }
+    }
+    
+    theme.settings.color.palette = [];
+
+    // 1. Export Colors from Variables
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const allVariables = await figma.variables.getLocalVariablesAsync();
+    
+    const colorCollections = collections.filter(c => c.name.startsWith("Theme Colors"));
     for (const collection of colorCollections) {
         const modeId = collection.modes[0]?.modeId;
         if (modeId) {
-            const variables = figma.variables.getLocalVariables().filter(v => v.variableCollectionId === collection.id);
+            const variables = allVariables.filter(v => v.variableCollectionId === collection.id);
             for (const variable of variables) {
                 const value = variable.valuesByMode[modeId];
                 if (value && typeof value === 'object' && 'r' in value) {
-                    // Check if already exists (avoid duplicates)
                     const slug = variable.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     if (!theme.settings.color.palette.some((c: any) => c.slug === slug)) {
                         theme.settings.color.palette.push({
@@ -118,32 +162,18 @@ async function exportThemeJson() {
         }
     }
 
-    // 2. Export Spacing from Variables (find collections that start with "Theme Spacing")
-    const spacingCollections = figma.variables.getLocalVariableCollections().filter(c => c.name.startsWith("Theme Spacing"));
-    for (const collection of spacingCollections) {
-        const modeId = collection.modes[0]?.modeId;
-        if (modeId) {
-            const variables = figma.variables.getLocalVariables().filter(v => v.variableCollectionId === collection.id);
-            for (const variable of variables) {
-                const value = variable.valuesByMode[modeId];
-                if (typeof value === 'number') {
-                    const slug = variable.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    if (!theme.settings.spacing.spacingSizes.some((s: any) => s.slug === slug)) {
-                        theme.settings.spacing.spacingSizes.push({
-                            slug: slug,
-                            name: variable.name,
-                            size: `${value}px`
-                        });
-                    }
-                }
-            }
-        }
+    // Typography settings
+    theme.settings.typography = {};
+    
+    if (options?.defaultFontSizes?.include) {
+        theme.settings.typography.defaultFontSizes = options.defaultFontSizes.value;
     }
+    
+    theme.settings.typography.fontSizes = [];
 
-    // 3. Export Typography from Text Styles
-    const textStyles = figma.getLocalTextStyles();
+    // 2. Export Typography from Text Styles
+    const textStyles = await figma.getLocalTextStylesAsync();
     for (const style of textStyles) {
-        // Extract the name without folder prefix if it starts with "Typography/"
         const displayName = style.name.startsWith('Typography/') 
             ? style.name.replace('Typography/', '') 
             : style.name;
@@ -158,13 +188,53 @@ async function exportThemeJson() {
         }
     }
 
-    // Remove empty sections
-    if (theme.settings.spacing.spacingSizes.length === 0) {
-        delete theme.settings.spacing;
+    // Spacing settings (version 2+)
+    if (version >= 2) {
+        theme.settings.spacing = {};
+        
+        if (options?.defaultSpacingSizes?.include) {
+            theme.settings.spacing.defaultSpacingSizes = options.defaultSpacingSizes.value;
+        }
+        
+        theme.settings.spacing.spacingSizes = [];
+
+        // 3. Export Spacing from Variables
+        const spacingCollections = collections.filter(c => c.name.startsWith("Theme Spacing"));
+        for (const collection of spacingCollections) {
+            const modeId = collection.modes[0]?.modeId;
+            if (modeId) {
+                const variables = allVariables.filter(v => v.variableCollectionId === collection.id);
+                for (const variable of variables) {
+                    const value = variable.valuesByMode[modeId];
+                    if (typeof value === 'number') {
+                        const slug = variable.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        if (!theme.settings.spacing.spacingSizes.some((s: any) => s.slug === slug)) {
+                            theme.settings.spacing.spacingSizes.push({
+                                slug: slug,
+                                name: variable.name,
+                                size: `${value}px`
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        if (theme.settings.spacing.spacingSizes.length === 0) {
+            delete theme.settings.spacing.spacingSizes;
+        }
+    }
+
+    if (theme.settings.color.palette.length === 0) {
+        delete theme.settings.color.palette;
+    }
+
+    if (theme.settings.typography.fontSizes.length === 0) {
+        delete theme.settings.typography.fontSizes;
     }
 
     figma.ui.postMessage({ type: 'export-theme-json-result', payload: theme });
-    figma.notify('Theme exported! Check UI to download.');
+    figma.notify(`Version ${version} theme.json exported!`);
 }
 
 // Default theme.json templates for each version
@@ -208,7 +278,6 @@ function getDefaultTemplate(version: number) {
             spacing: baseSpacing.slice(0, 5),
         };
     } else {
-        // Version 3 - Full featured
         return {
             colors: [
                 { name: 'Base', slug: 'base', color: '#FFFFFF' },
@@ -231,9 +300,13 @@ async function generateThemeJson(version: number) {
     let createdFontSizes = 0;
     let createdSpacing = 0;
 
+    // Get existing collections and variables
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    let allVariables = await figma.variables.getLocalVariablesAsync();
+
     // 1. Create Color Variables
     const colorCollectionName = `Theme Colors (v${version})`;
-    let colorCollection = figma.variables.getLocalVariableCollections().find(c => c.name === colorCollectionName);
+    let colorCollection = collections.find(c => c.name === colorCollectionName);
     if (!colorCollection) {
         colorCollection = figma.variables.createVariableCollection(colorCollectionName);
     }
@@ -241,11 +314,11 @@ async function generateThemeJson(version: number) {
     for (const colorItem of template.colors) {
         const rgb = hexToRgb(colorItem.color);
         if (rgb) {
-            let variable = figma.variables.getLocalVariables().find(
+            let variable = allVariables.find(
                 v => v.variableCollectionId === colorCollection!.id && v.name === colorItem.name
             );
             if (!variable) {
-                variable = figma.variables.createVariable(colorItem.name, colorCollection.id, 'COLOR');
+                variable = figma.variables.createVariable(colorItem.name, colorCollection, 'COLOR');
                 createdColors++;
             }
             const modes = colorCollection.modes;
@@ -258,18 +331,21 @@ async function generateThemeJson(version: number) {
     // 2. Create Spacing Variables (Version 2+)
     if (template.spacing.length > 0) {
         const spacingCollectionName = `Theme Spacing (v${version})`;
-        let spacingCollection = figma.variables.getLocalVariableCollections().find(c => c.name === spacingCollectionName);
+        let spacingCollection = collections.find(c => c.name === spacingCollectionName);
         if (!spacingCollection) {
             spacingCollection = figma.variables.createVariableCollection(spacingCollectionName);
         }
 
+        // Refresh variables list after creating new collection
+        allVariables = await figma.variables.getLocalVariablesAsync();
+
         for (const spacingItem of template.spacing) {
             let size = parseFloat(spacingItem.size);
-            let variable = figma.variables.getLocalVariables().find(
+            let variable = allVariables.find(
                 v => v.variableCollectionId === spacingCollection!.id && v.name === spacingItem.name
             );
             if (!variable) {
-                variable = figma.variables.createVariable(spacingItem.name, spacingCollection.id, 'FLOAT');
+                variable = figma.variables.createVariable(spacingItem.name, spacingCollection, 'FLOAT');
                 createdSpacing++;
             }
             const modes = spacingCollection.modes;
@@ -282,10 +358,12 @@ async function generateThemeJson(version: number) {
     // 3. Create Text Styles
     await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
 
+    const textStyles = await figma.getLocalTextStylesAsync();
+
     for (const fontSize of template.fontSizes) {
         let size = parseFloat(fontSize.size);
         const styleName = `Typography/${fontSize.name}`;
-        let style = figma.getLocalTextStyles().find(s => s.name === styleName);
+        let style = textStyles.find(s => s.name === styleName);
         if (!style) {
             style = figma.createTextStyle();
             style.name = styleName;
@@ -309,7 +387,7 @@ figma.ui.onmessage = async (msg) => {
         }
     } else if (msg.type === 'export-theme-json') {
         try {
-            await exportThemeJson();
+            await exportThemeJson(msg.payload);
         } catch (e: any) {
             console.error(e);
             figma.notify('Error exporting theme: ' + e.message);
