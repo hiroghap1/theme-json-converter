@@ -40,37 +40,86 @@ const GenerateIcon: React.FC<{ color?: string; size?: number }> = ({ color = 'cu
 
 type TabType = 'import' | 'export' | 'generate';
 
-interface OptionSetting {
+interface OptionSetting<T = boolean> {
     include: boolean;  // 出力するかどうか
-    value: boolean;    // true/false の値
+    value: T;          // 出力する値
 }
 
 interface ExportOptions {
-    version: number;
+    presetKey: string;  // "${schemaVersion}-${wpVersion}" e.g. "3-7.0"
     appearanceTools: OptionSetting;
     defaultPalette: OptionSetting;
     defaultGradients: OptionSetting;
     defaultDuotone: OptionSetting;
     defaultFontSizes: OptionSetting;
     defaultSpacingSizes: OptionSetting;
+    textIndent: OptionSetting<'subsequent' | 'all'>;
+    width: OptionSetting;
+    height: OptionSetting;
+    minWidth: OptionSetting;
+    backgroundGradient: OptionSetting;
+    blockVisibilityAllowEditing: OptionSetting;
+    viewport: OptionSetting<{ mobile: string; tablet: string }>;
 }
+
+type BooleanOptionKey = 'appearanceTools' | 'defaultPalette' | 'defaultGradients' | 'defaultDuotone' | 'defaultFontSizes' | 'defaultSpacingSizes' | 'width' | 'height' | 'minWidth' | 'backgroundGradient' | 'blockVisibilityAllowEditing';
+
+// Schema/WP version presets. Add new rows when a new WP release ships changes.
+const PRESETS: { key: string; label: string; schemaVersion: number; wpVersion: string }[] = [
+    { key: '1-5.8', label: 'Version 1 (WordPress 5.8+)', schemaVersion: 1, wpVersion: '5.8' },
+    { key: '2-5.9', label: 'Version 2 (WordPress 5.9+)', schemaVersion: 2, wpVersion: '5.9' },
+    { key: '3-6.6', label: 'Version 3 (WordPress 6.6+)', schemaVersion: 3, wpVersion: '6.6' },
+    { key: '3-7.0', label: 'Version 3 (WordPress 7.0+)', schemaVersion: 3, wpVersion: '7.0' },
+    { key: '3-7.1', label: 'Version 3 (WordPress 7.1+)', schemaVersion: 3, wpVersion: '7.1' },
+];
+
+const DEFAULT_PRESET_KEY = '3-6.6';
+
+const getPreset = (key: string) =>
+    PRESETS.find(p => p.key === key) ?? PRESETS.find(p => p.key === DEFAULT_PRESET_KEY)!;
+
+// settings.viewport.mobile / tablet pattern (WordPress 7.1+)
+const VIEWPORT_PATTERN = /^(?:\d+|\d*\.\d+)(?:px|em|rem)$/;
+
+const wpAtLeast = (wpVersion: string, minVersion: string): boolean => {
+    const parse = (s: string) => s.split('.').map(n => parseInt(n, 10) || 0);
+    const a = parse(wpVersion);
+    const b = parse(minVersion);
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+        const ai = a[i] ?? 0;
+        const bi = b[i] ?? 0;
+        if (ai !== bi) return ai > bi;
+    }
+    return true;
+};
 
 const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('import');
-    const [version, setVersion] = useState<number>(3);
+    const [generatePresetKey, setGeneratePresetKey] = useState<string>(DEFAULT_PRESET_KEY);
     const [status, setStatus] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     // Export options
     const [exportOptions, setExportOptions] = useState<ExportOptions>({
-        version: 3,
+        presetKey: DEFAULT_PRESET_KEY,
         appearanceTools: { include: true, value: true },
         defaultPalette: { include: true, value: false },
         defaultGradients: { include: true, value: false },
         defaultDuotone: { include: true, value: false },
         defaultFontSizes: { include: true, value: false },
         defaultSpacingSizes: { include: true, value: false },
+        textIndent: { include: true, value: 'subsequent' },
+        width: { include: true, value: false },
+        height: { include: true, value: false },
+        minWidth: { include: true, value: false },
+        backgroundGradient: { include: true, value: false },
+        blockVisibilityAllowEditing: { include: true, value: true },
+        viewport: { include: true, value: { mobile: '480px', tablet: '782px' } },
     });
+
+    const exportPreset = getPreset(exportOptions.presetKey);
+    const generatePreset = getPreset(generatePresetKey);
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -110,24 +159,52 @@ const App: React.FC = () => {
     }, []);
 
     const handleExport = () => {
-        parent.postMessage({ pluginMessage: { type: 'export-theme-json', payload: exportOptions } }, '*');
+        const { schemaVersion, wpVersion } = getPreset(exportOptions.presetKey);
+        parent.postMessage({
+            pluginMessage: {
+                type: 'export-theme-json',
+                payload: { ...exportOptions, schemaVersion, wpVersion },
+            },
+        }, '*');
         setStatus('エクスポート中...');
     };
 
-    const handleVersionChange = (value: number) => {
-        setExportOptions(prev => ({ ...prev, version: value }));
+    const handleExportPresetChange = (key: string) => {
+        setExportOptions(prev => ({ ...prev, presetKey: key }));
     };
 
-    const handleOptionSettingChange = (key: Exclude<keyof ExportOptions, 'version'>, field: 'include' | 'value', value: boolean) => {
+    const handleOptionSettingChange = (key: BooleanOptionKey, field: 'include' | 'value', value: boolean) => {
         setExportOptions(prev => ({
             ...prev,
             [key]: { ...prev[key], [field]: value }
         }));
     };
 
+    const handleTextIndentChange = (field: 'include' | 'value', value: boolean | 'subsequent' | 'all') => {
+        setExportOptions(prev => ({
+            ...prev,
+            textIndent: { ...prev.textIndent, [field]: value } as OptionSetting<'subsequent' | 'all'>
+        }));
+    };
+
+    const handleViewportChange = (field: 'include' | 'mobile' | 'tablet', value: boolean | string) => {
+        setExportOptions(prev => ({
+            ...prev,
+            viewport: field === 'include'
+                ? { ...prev.viewport, include: value as boolean }
+                : { ...prev.viewport, value: { ...prev.viewport.value, [field]: value as string } }
+        }));
+    };
+
     const handleGenerate = () => {
-        parent.postMessage({ pluginMessage: { type: 'generate-theme-json', payload: { version } } }, '*');
-        setStatus(`バージョン ${version} でスタイルを生成中...`);
+        const { schemaVersion, wpVersion, label } = getPreset(generatePresetKey);
+        parent.postMessage({
+            pluginMessage: {
+                type: 'generate-theme-json',
+                payload: { schemaVersion, wpVersion },
+            },
+        }, '*');
+        setStatus(`${label} でスタイルを生成中...`);
     };
 
     const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
@@ -194,13 +271,13 @@ const App: React.FC = () => {
                         <div style={styles.versionSelector}>
                             <label style={styles.label}>theme.jsonバージョン:</label>
                             <select
-                                value={exportOptions.version}
-                                onChange={(e) => handleVersionChange(Number(e.target.value))}
+                                value={exportOptions.presetKey}
+                                onChange={(e) => handleExportPresetChange(e.target.value)}
                                 style={styles.select}
                             >
-                                <option value={1}>Version 1 (WordPress 5.8+)</option>
-                                <option value={2}>Version 2 (WordPress 5.9+)</option>
-                                <option value={3}>Version 3 (WordPress 6.6+)</option>
+                                {PRESETS.map(p => (
+                                    <option key={p.key} value={p.key}>{p.label}</option>
+                                ))}
                             </select>
                         </div>
 
@@ -391,7 +468,7 @@ const App: React.FC = () => {
                                 )}
                             </div>
 
-                            {exportOptions.version >= 2 && (
+                            {exportPreset.schemaVersion >= 2 && (
                                 <>
                                     <p style={styles.optionGroupTitle}>Spacing設定:</p>
                                     <div style={styles.optionRow}>
@@ -431,6 +508,279 @@ const App: React.FC = () => {
                                     </div>
                                 </>
                             )}
+
+                            {wpAtLeast(exportPreset.wpVersion, '7.0') && (
+                                <>
+                                    <p style={styles.optionGroupTitle}>Typography 追加設定 (WordPress 7.0+):</p>
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.textIndent.include}
+                                                onChange={(e) => handleTextIndentChange('include', e.target.checked)}
+                                                style={styles.checkbox}
+                                            />
+                                            textIndent を出力
+                                        </label>
+                                        {exportOptions.textIndent.include && (
+                                            <div style={styles.valueSelector}>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="textIndentValue"
+                                                        checked={exportOptions.textIndent.value === 'subsequent'}
+                                                        onChange={() => handleTextIndentChange('value', 'subsequent')}
+                                                        style={styles.radio}
+                                                    />
+                                                    subsequent
+                                                </label>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="textIndentValue"
+                                                        checked={exportOptions.textIndent.value === 'all'}
+                                                        onChange={() => handleTextIndentChange('value', 'all')}
+                                                        style={styles.radio}
+                                                    />
+                                                    all
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <p style={styles.optionGroupTitle}>Dimensions設定 (WordPress 7.0+):</p>
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.width.include}
+                                                onChange={(e) => handleOptionSettingChange('width', 'include', e.target.checked)}
+                                                style={styles.checkbox}
+                                            />
+                                            width を出力
+                                        </label>
+                                        {exportOptions.width.include && (
+                                            <div style={styles.valueSelector}>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="widthValue"
+                                                        checked={exportOptions.width.value === true}
+                                                        onChange={() => handleOptionSettingChange('width', 'value', true)}
+                                                        style={styles.radio}
+                                                    />
+                                                    true
+                                                </label>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="widthValue"
+                                                        checked={exportOptions.width.value === false}
+                                                        onChange={() => handleOptionSettingChange('width', 'value', false)}
+                                                        style={styles.radio}
+                                                    />
+                                                    false
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.height.include}
+                                                onChange={(e) => handleOptionSettingChange('height', 'include', e.target.checked)}
+                                                style={styles.checkbox}
+                                            />
+                                            height を出力
+                                        </label>
+                                        {exportOptions.height.include && (
+                                            <div style={styles.valueSelector}>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="heightValue"
+                                                        checked={exportOptions.height.value === true}
+                                                        onChange={() => handleOptionSettingChange('height', 'value', true)}
+                                                        style={styles.radio}
+                                                    />
+                                                    true
+                                                </label>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="heightValue"
+                                                        checked={exportOptions.height.value === false}
+                                                        onChange={() => handleOptionSettingChange('height', 'value', false)}
+                                                        style={styles.radio}
+                                                    />
+                                                    false
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {wpAtLeast(exportPreset.wpVersion, '7.1') && (
+                                        <div style={styles.optionRow}>
+                                            <label style={styles.checkboxLabel}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={exportOptions.minWidth.include}
+                                                    onChange={(e) => handleOptionSettingChange('minWidth', 'include', e.target.checked)}
+                                                    style={styles.checkbox}
+                                                />
+                                                minWidth を出力
+                                            </label>
+                                            {exportOptions.minWidth.include && (
+                                                <div style={styles.valueSelector}>
+                                                    <label style={styles.radioLabel}>
+                                                        <input
+                                                            type="radio"
+                                                            name="minWidthValue"
+                                                            checked={exportOptions.minWidth.value === true}
+                                                            onChange={() => handleOptionSettingChange('minWidth', 'value', true)}
+                                                            style={styles.radio}
+                                                        />
+                                                        true
+                                                    </label>
+                                                    <label style={styles.radioLabel}>
+                                                        <input
+                                                            type="radio"
+                                                            name="minWidthValue"
+                                                            checked={exportOptions.minWidth.value === false}
+                                                            onChange={() => handleOptionSettingChange('minWidth', 'value', false)}
+                                                            style={styles.radio}
+                                                        />
+                                                        false
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {wpAtLeast(exportPreset.wpVersion, '7.1') && (
+                                <>
+                                    <p style={styles.optionGroupTitle}>Background設定 (WordPress 7.1+):</p>
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.backgroundGradient.include}
+                                                onChange={(e) => handleOptionSettingChange('backgroundGradient', 'include', e.target.checked)}
+                                                style={styles.checkbox}
+                                            />
+                                            background.gradient を出力
+                                        </label>
+                                        {exportOptions.backgroundGradient.include && (
+                                            <div style={styles.valueSelector}>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="backgroundGradientValue"
+                                                        checked={exportOptions.backgroundGradient.value === true}
+                                                        onChange={() => handleOptionSettingChange('backgroundGradient', 'value', true)}
+                                                        style={styles.radio}
+                                                    />
+                                                    true
+                                                </label>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="backgroundGradientValue"
+                                                        checked={exportOptions.backgroundGradient.value === false}
+                                                        onChange={() => handleOptionSettingChange('backgroundGradient', 'value', false)}
+                                                        style={styles.radio}
+                                                    />
+                                                    false
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <p style={styles.optionGroupTitle}>Block Visibility設定 (WordPress 7.1+):</p>
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.blockVisibilityAllowEditing.include}
+                                                onChange={(e) => handleOptionSettingChange('blockVisibilityAllowEditing', 'include', e.target.checked)}
+                                                style={styles.checkbox}
+                                            />
+                                            blockVisibility.allowEditing を出力
+                                        </label>
+                                        {exportOptions.blockVisibilityAllowEditing.include && (
+                                            <div style={styles.valueSelector}>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="blockVisibilityAllowEditingValue"
+                                                        checked={exportOptions.blockVisibilityAllowEditing.value === true}
+                                                        onChange={() => handleOptionSettingChange('blockVisibilityAllowEditing', 'value', true)}
+                                                        style={styles.radio}
+                                                    />
+                                                    true
+                                                </label>
+                                                <label style={styles.radioLabel}>
+                                                    <input
+                                                        type="radio"
+                                                        name="blockVisibilityAllowEditingValue"
+                                                        checked={exportOptions.blockVisibilityAllowEditing.value === false}
+                                                        onChange={() => handleOptionSettingChange('blockVisibilityAllowEditing', 'value', false)}
+                                                        style={styles.radio}
+                                                    />
+                                                    false
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <p style={styles.optionGroupTitle}>Viewport設定 (WordPress 7.1+):</p>
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.viewport.include}
+                                                onChange={(e) => handleViewportChange('include', e.target.checked)}
+                                                style={styles.checkbox}
+                                            />
+                                            viewport を出力
+                                        </label>
+                                        {exportOptions.viewport.include && (
+                                            <div style={styles.valueSelector}>
+                                                <label style={styles.radioLabel}>
+                                                    mobile
+                                                    <input
+                                                        type="text"
+                                                        value={exportOptions.viewport.value.mobile}
+                                                        onChange={(e) => handleViewportChange('mobile', e.target.value)}
+                                                        placeholder="480px"
+                                                        style={{
+                                                            ...styles.textInput,
+                                                            ...(exportOptions.viewport.value.mobile && !VIEWPORT_PATTERN.test(exportOptions.viewport.value.mobile) ? styles.textInputError : {}),
+                                                        }}
+                                                    />
+                                                </label>
+                                                <label style={styles.radioLabel}>
+                                                    tablet
+                                                    <input
+                                                        type="text"
+                                                        value={exportOptions.viewport.value.tablet}
+                                                        onChange={(e) => handleViewportChange('tablet', e.target.value)}
+                                                        placeholder="782px"
+                                                        style={{
+                                                            ...styles.textInput,
+                                                            ...(exportOptions.viewport.value.tablet && !VIEWPORT_PATTERN.test(exportOptions.viewport.value.tablet) ? styles.textInputError : {}),
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <button style={styles.primaryButton} onClick={handleExport}>
@@ -449,13 +799,13 @@ const App: React.FC = () => {
                         <div style={styles.versionSelector}>
                             <label style={styles.label}>theme.jsonバージョン:</label>
                             <select
-                                value={version}
-                                onChange={(e) => setVersion(Number(e.target.value))}
+                                value={generatePresetKey}
+                                onChange={(e) => setGeneratePresetKey(e.target.value)}
                                 style={styles.select}
                             >
-                                <option value={1}>Version 1 (WordPress 5.8+)</option>
-                                <option value={2}>Version 2 (WordPress 5.9+)</option>
-                                <option value={3}>Version 3 (WordPress 6.6+)</option>
+                                {PRESETS.map(p => (
+                                    <option key={p.key} value={p.key}>{p.label}</option>
+                                ))}
                             </select>
                         </div>
                         <div style={styles.featureList}>
@@ -464,6 +814,7 @@ const App: React.FC = () => {
                                 <li>カラーパレット（バリアブル）</li>
                                 <li>フォントサイズ（テキストスタイル）</li>
                                 <li>スペーシング（バリアブル）</li>
+                                {wpAtLeast(generatePreset.wpVersion, '7.0') && <li>ディメンション（バリアブル）</li>}
                             </ul>
                         </div>
                         <button style={styles.primaryButton} onClick={handleGenerate}>
@@ -707,6 +1058,17 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '12px',
         color: '#555',
         cursor: 'pointer',
+    },
+    textInput: {
+        width: '72px',
+        padding: '2px 6px',
+        fontSize: '12px',
+        border: '1px solid #d0d0d0',
+        borderRadius: '4px',
+        outline: 'none',
+    },
+    textInputError: {
+        borderColor: '#d63638',
     },
     radio: {
         width: '14px',

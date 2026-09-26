@@ -82,41 +82,60 @@ function rgbToHex(r: number, g: number, b: number): string {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-interface OptionSetting {
+interface OptionSetting<T = boolean> {
     include: boolean;
-    value: boolean;
+    value: T;
 }
 
 interface ExportOptions {
-    version: number;
+    schemaVersion: number;
+    wpVersion: string;
     appearanceTools: OptionSetting;
     defaultPalette: OptionSetting;
     defaultGradients: OptionSetting;
     defaultDuotone: OptionSetting;
     defaultFontSizes: OptionSetting;
     defaultSpacingSizes: OptionSetting;
+    textIndent: OptionSetting<'subsequent' | 'all'>;
+    width: OptionSetting;
+    height: OptionSetting;
+    minWidth: OptionSetting;
+    backgroundGradient: OptionSetting;
+    blockVisibilityAllowEditing: OptionSetting;
+    viewport: OptionSetting<{ mobile: string; tablet: string }>;
 }
 
-function getSchemaUrl(version: number): string {
-    switch (version) {
-        case 1: return "https://schemas.wp.org/wp/5.8/theme.json";
-        case 2: return "https://schemas.wp.org/wp/5.9/theme.json";
-        case 3: return "https://schemas.wp.org/wp/6.6/theme.json";
-        default: return "https://schemas.wp.org/wp/6.6/theme.json";
+function getSchemaUrl(wpVersion: string): string {
+    return `https://schemas.wp.org/wp/${wpVersion}/theme.json`;
+}
+
+// Compare WP version strings like "6.6" / "7.0" / "7.1.2" numerically
+function wpAtLeast(wpVersion: string, minVersion: string): boolean {
+    const parse = (s: string) => s.split('.').map(n => parseInt(n, 10) || 0);
+    const a = parse(wpVersion);
+    const b = parse(minVersion);
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+        const ai = a[i] ?? 0;
+        const bi = b[i] ?? 0;
+        if (ai !== bi) return ai > bi;
     }
+    return true;
 }
 
 async function exportThemeJson(options?: ExportOptions) {
-    const version = options?.version || 3;
-    
+    const schemaVersion = options?.schemaVersion ?? 3;
+    const wpVersion = options?.wpVersion ?? '6.6';
+    const isWp7Plus = wpAtLeast(wpVersion, '7.0');
+
     const theme: any = {
-        $schema: getSchemaUrl(version),
-        version: version,
+        $schema: getSchemaUrl(wpVersion),
+        version: schemaVersion,
         settings: {}
     };
 
-    // Add appearanceTools if enabled (version 2+)
-    if (version >= 2 && options?.appearanceTools?.include) {
+    // Add appearanceTools if enabled (schema version 2+)
+    if (schemaVersion >= 2 && options?.appearanceTools?.include) {
         theme.settings.appearanceTools = options.appearanceTools.value;
     }
 
@@ -164,11 +183,16 @@ async function exportThemeJson(options?: ExportOptions) {
 
     // Typography settings
     theme.settings.typography = {};
-    
+
     if (options?.defaultFontSizes?.include) {
         theme.settings.typography.defaultFontSizes = options.defaultFontSizes.value;
     }
-    
+
+    // textIndent (WordPress 7.0+)
+    if (isWp7Plus && options?.textIndent?.include) {
+        theme.settings.typography.textIndent = options.textIndent.value;
+    }
+
     theme.settings.typography.fontSizes = [];
 
     // 2. Export Typography from Text Styles
@@ -188,8 +212,8 @@ async function exportThemeJson(options?: ExportOptions) {
         }
     }
 
-    // Spacing settings (version 2+)
-    if (version >= 2) {
+    // Spacing settings (schema version 2+)
+    if (schemaVersion >= 2) {
         theme.settings.spacing = {};
         
         if (options?.defaultSpacingSizes?.include) {
@@ -225,6 +249,73 @@ async function exportThemeJson(options?: ExportOptions) {
         }
     }
 
+    // Dimensions settings (WordPress 7.0+)
+    if (isWp7Plus) {
+        const dimensions: any = {};
+
+        if (options?.width?.include) {
+            dimensions.width = options.width.value;
+        }
+        if (options?.height?.include) {
+            dimensions.height = options.height.value;
+        }
+        // minWidth (WordPress 7.1+)
+        if (wpAtLeast(wpVersion, '7.1') && options?.minWidth?.include) {
+            dimensions.minWidth = options.minWidth.value;
+        }
+
+        const dimensionSizes: any[] = [];
+        const dimensionCollections = collections.filter(c => c.name.startsWith("Theme Dimensions"));
+        for (const collection of dimensionCollections) {
+            const modeId = collection.modes[0]?.modeId;
+            if (modeId) {
+                const variables = allVariables.filter(v => v.variableCollectionId === collection.id);
+                for (const variable of variables) {
+                    const value = variable.valuesByMode[modeId];
+                    if (typeof value === 'number') {
+                        const slug = variable.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        if (!dimensionSizes.some(d => d.slug === slug)) {
+                            dimensionSizes.push({
+                                slug: slug,
+                                name: variable.name,
+                                size: `${value}px`
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        if (dimensionSizes.length > 0) {
+            dimensions.dimensionSizes = dimensionSizes;
+        }
+
+        if (Object.keys(dimensions).length > 0) {
+            theme.settings.dimensions = dimensions;
+        }
+    }
+
+    // Background / Block Visibility / Viewport settings (WordPress 7.1+)
+    if (wpAtLeast(wpVersion, '7.1')) {
+        if (options?.backgroundGradient?.include) {
+            theme.settings.background = { gradient: options.backgroundGradient.value };
+        }
+        if (options?.blockVisibilityAllowEditing?.include) {
+            theme.settings.blockVisibility = { allowEditing: options.blockVisibilityAllowEditing.value };
+        }
+        if (options?.viewport?.include) {
+            // Values not matching the schema pattern are skipped (WordPress ignores them anyway)
+            const viewportPattern = /^(?:\d+|\d*\.\d+)(?:px|em|rem)$/;
+            const viewport: any = {};
+            const { mobile, tablet } = options.viewport.value;
+            if (viewportPattern.test(mobile)) viewport.mobile = mobile;
+            if (viewportPattern.test(tablet)) viewport.tablet = tablet;
+            if (Object.keys(viewport).length > 0) {
+                theme.settings.viewport = viewport;
+            }
+        }
+    }
+
     if (theme.settings.color.palette.length === 0) {
         delete theme.settings.color.palette;
     }
@@ -234,11 +325,12 @@ async function exportThemeJson(options?: ExportOptions) {
     }
 
     figma.ui.postMessage({ type: 'export-theme-json-result', payload: theme });
-    figma.notify(`Version ${version} theme.json exported!`);
+    figma.notify(`Version ${schemaVersion} (WordPress ${wpVersion}+) theme.json exported!`);
 }
 
-// Default theme.json templates for each version
-function getDefaultTemplate(version: number) {
+// Default theme.json templates for each (schemaVersion, wpVersion) pair
+function getDefaultTemplate(schemaVersion: number, wpVersion: string) {
+    const isWp7Plus = wpAtLeast(wpVersion, '7.0');
     const baseColors = [
         { name: 'Base', slug: 'base', color: '#FFFFFF' },
         { name: 'Contrast', slug: 'contrast', color: '#111111' },
@@ -265,47 +357,60 @@ function getDefaultTemplate(version: number) {
         { name: 'XX-Large', slug: '80', size: '100px' },
     ];
 
-    if (version === 1) {
+    const baseDimensions = [
+        { name: 'Small', slug: 'small', size: '240px' },
+        { name: 'Medium', slug: 'medium', size: '480px' },
+        { name: 'Large', slug: 'large', size: '720px' },
+    ];
+
+    const v3Colors = [
+        { name: 'Base', slug: 'base', color: '#FFFFFF' },
+        { name: 'Contrast', slug: 'contrast', color: '#111111' },
+        { name: 'Accent 1', slug: 'accent-1', color: '#FFEE58' },
+        { name: 'Accent 2', slug: 'accent-2', color: '#F6CFF4' },
+        { name: 'Accent 3', slug: 'accent-3', color: '#503AA8' },
+        { name: 'Accent 4', slug: 'accent-4', color: '#686868' },
+        { name: 'Accent 5', slug: 'accent-5', color: '#FBFAF3' },
+    ];
+
+    if (schemaVersion === 1) {
         return {
             colors: baseColors.slice(0, 3),
             fontSizes: baseFontSizes.slice(0, 3),
             spacing: [],
+            dimensions: [],
         };
-    } else if (version === 2) {
+    } else if (schemaVersion === 2) {
         return {
             colors: baseColors,
             fontSizes: baseFontSizes,
             spacing: baseSpacing.slice(0, 5),
+            dimensions: [],
         };
     } else {
         return {
-            colors: [
-                { name: 'Base', slug: 'base', color: '#FFFFFF' },
-                { name: 'Contrast', slug: 'contrast', color: '#111111' },
-                { name: 'Accent 1', slug: 'accent-1', color: '#FFEE58' },
-                { name: 'Accent 2', slug: 'accent-2', color: '#F6CFF4' },
-                { name: 'Accent 3', slug: 'accent-3', color: '#503AA8' },
-                { name: 'Accent 4', slug: 'accent-4', color: '#686868' },
-                { name: 'Accent 5', slug: 'accent-5', color: '#FBFAF3' },
-            ],
+            colors: v3Colors,
             fontSizes: baseFontSizes,
             spacing: baseSpacing,
+            dimensions: isWp7Plus ? baseDimensions : [],
         };
     }
 }
 
-async function generateThemeJson(version: number) {
-    const template = getDefaultTemplate(version);
+async function generateThemeJson(schemaVersion: number, wpVersion: string) {
+    const template = getDefaultTemplate(schemaVersion, wpVersion);
+    const suffix = `v${schemaVersion}-wp${wpVersion}`;
     let createdColors = 0;
     let createdFontSizes = 0;
     let createdSpacing = 0;
+    let createdDimensions = 0;
 
     // Get existing collections and variables
     const collections = await figma.variables.getLocalVariableCollectionsAsync();
     let allVariables = await figma.variables.getLocalVariablesAsync();
 
     // 1. Create Color Variables
-    const colorCollectionName = `Theme Colors (v${version})`;
+    const colorCollectionName = `Theme Colors (${suffix})`;
     let colorCollection = collections.find(c => c.name === colorCollectionName);
     if (!colorCollection) {
         colorCollection = figma.variables.createVariableCollection(colorCollectionName);
@@ -330,7 +435,7 @@ async function generateThemeJson(version: number) {
 
     // 2. Create Spacing Variables (Version 2+)
     if (template.spacing.length > 0) {
-        const spacingCollectionName = `Theme Spacing (v${version})`;
+        const spacingCollectionName = `Theme Spacing (${suffix})`;
         let spacingCollection = collections.find(c => c.name === spacingCollectionName);
         if (!spacingCollection) {
             spacingCollection = figma.variables.createVariableCollection(spacingCollectionName);
@@ -355,7 +460,33 @@ async function generateThemeJson(version: number) {
         }
     }
 
-    // 3. Create Text Styles
+    // 3. Create Dimension Variables (Version 4: WordPress 7.0+)
+    if (template.dimensions.length > 0) {
+        const dimensionCollectionName = `Theme Dimensions (${suffix})`;
+        let dimensionCollection = collections.find(c => c.name === dimensionCollectionName);
+        if (!dimensionCollection) {
+            dimensionCollection = figma.variables.createVariableCollection(dimensionCollectionName);
+        }
+
+        allVariables = await figma.variables.getLocalVariablesAsync();
+
+        for (const dimensionItem of template.dimensions) {
+            let size = parseFloat(dimensionItem.size);
+            let variable = allVariables.find(
+                v => v.variableCollectionId === dimensionCollection!.id && v.name === dimensionItem.name
+            );
+            if (!variable) {
+                variable = figma.variables.createVariable(dimensionItem.name, dimensionCollection, 'FLOAT');
+                createdDimensions++;
+            }
+            const modes = dimensionCollection.modes;
+            if (modes.length > 0) {
+                variable.setValueForMode(modes[0].modeId, size);
+            }
+        }
+    }
+
+    // 4. Create Text Styles
     await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
 
     const textStyles = await figma.getLocalTextStylesAsync();
@@ -372,7 +503,8 @@ async function generateThemeJson(version: number) {
         style.fontSize = size;
     }
 
-    const message = `生成完了！ カラー: ${createdColors}個, フォント: ${createdFontSizes}個, スペーシング: ${createdSpacing}個`;
+    const dimensionPart = template.dimensions.length > 0 ? `, ディメンション: ${createdDimensions}個` : '';
+    const message = `生成完了！ カラー: ${createdColors}個, フォント: ${createdFontSizes}個, スペーシング: ${createdSpacing}個${dimensionPart}`;
     figma.notify(message);
 }
 
@@ -394,8 +526,9 @@ figma.ui.onmessage = async (msg) => {
         }
     } else if (msg.type === 'generate-theme-json') {
         try {
-            const version = msg.payload?.version || 3;
-            await generateThemeJson(version);
+            const schemaVersion = msg.payload?.schemaVersion || 3;
+            const wpVersion = msg.payload?.wpVersion || '6.6';
+            await generateThemeJson(schemaVersion, wpVersion);
         } catch (e: any) {
             console.error(e);
             figma.notify('Error generating theme: ' + e.message);
