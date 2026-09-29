@@ -8,10 +8,12 @@ WP theme-json Converter bridges the gap between WordPress and Figma, making it e
 
 ## Features
 Import
-Upload a WordPress theme.json file to automatically create Figma variables and text styles. Colors from the palette are converted to color variables, and font sizes become text styles.
+Upload (or drag and drop) a WordPress theme.json file to automatically create Figma variables and text styles. Colors, duotone, spacing, dimensions, layout widths, font families, border radius and viewport become variables, and font sizes become text styles (fluid sizes are bound to Desktop / Mobile variables).
 
 Export
 Generate a theme.json file from your existing Figma variables and styles. Perfect for transferring your design system to WordPress block themes.
+Each setting (appearanceTools, defaultPalette, textIndent, viewport, etc.) can be included or excluded, and its value chosen, individually.
+Extra modes of your "Theme Colors" collection (e.g. Dark) are exported as style variations (styles/*.json) in a zip.
 
 Generate
 Create a starter set of variables and styles based on theme.json schema versions:
@@ -42,26 +44,31 @@ Create a starter set of variables and styles based on theme.json schema versions
 
 ## Changelog
 
-### v1.3.0 (2026-09-26)
-- WordPress 7.1+ プリセットを追加（theme.json スキーマは引き続き version 3、`$schema` は `https://schemas.wp.org/wp/7.1/theme.json`）
-    - エクスポート: `settings.dimensions.minWidth` を追加（WordPress 7.1+ 選択時のみ）
-    - エクスポート: `settings.background.gradient`、`settings.blockVisibility.allowEditing`、`settings.viewport`（`mobile` / `tablet`、`px` / `em` / `rem`）を追加（WordPress 7.1+ 選択時のみ）
-    - 生成/インポート/エクスポート: 以下を Figma バリアブルと相互変換（インポートは `px` の値のみ）
-        - `settings.layout.contentSize` / `wideSize` ⇔ `Theme Layout` コレクション（`contentSize` / `wideSize`）
-        - `settings.typography.fontFamilies` ⇔ `Theme Font Families` コレクション（文字列バリアブル。フォールバックを含む CSS 指定は説明欄に保持）
-        - `settings.border.radiusSizes` ⇔ `Theme Radius` コレクション（WordPress 6.9+ / 7.0+ プリセット以降）
-        - `settings.viewport` ⇔ `Theme Viewport` コレクション（`mobile` / `tablet`、WordPress 7.1+）
+### v1.3.0 (2026-09-30)
+- WordPress 7.1 対応（theme.json は version 3 のまま、`$schema` は WordPress 7.1 用）
+    - プリセットに「Version 3 (WordPress 7.1+)」を追加し、最新のプリセットを初期値に
+    - エクスポート: `settings.dimensions.minWidth`、`settings.background.gradient`、`settings.blockVisibility.allowEditing`、`settings.viewport`（`mobile` / `tablet`）を追加
     - エクスポート: `viewport` の値を「自由入力」か `Theme Viewport` のバリアブルから選択可能に
-    - インポート: `settings.spacing.spacingSizes`（`Theme Spacing`）、`settings.dimensions.dimensionSizes`（`Theme Dimensions`）の取り込みに対応（`px` / `rem`（16px換算）の値のみ）
-    - 生成/インポート: 各プリセットのスラッグを保持し、エクスポート時に復元するように（名前とスラッグが異なるプリセットも正しく往復）
-        - カラー・フォントファミリー・スペーシング・角丸・ディメンション: バリアブルの WEB コードシンタックスに設定（例: `var(--wp--preset--spacing--20)`）
-        - フォントサイズ: テキストスタイルの説明欄に追記（例: `var(--wp--preset--font-size--medium)`。既存の説明文は残す）
-    - デュオトーン（`settings.color.duotone`）⇔ `Theme Duotone` コレクション（`<名前>/shadow` と `<名前>/highlight` のカラーバリアブルの組。`Theme Colors` のバリアブルを参照可能）
-    - スタイルバリエーション: `Theme Colors` の2つ目以降のモードを `styles/<モード名>.json` として出力（theme.json と合わせて zip でダウンロード）
-    - 可変フォントサイズ（`fontSizes[].fluid`）⇔ `Theme Font Sizes` コレクション（Desktop / Mobile の2モード。テキストスタイルのフォントサイズをバリアブルに割り当て、エクスポート時に `settings.typography.fluid: true` を自動設定）
+- Figma バリアブルとの相互変換を追加（生成・インポート・エクスポート）
+    - レイアウト幅 `settings.layout.contentSize` / `wideSize` ⇔ `Theme Layout`
+    - フォントファミリー `settings.typography.fontFamilies` ⇔ `Theme Font Families`（文字列バリアブル。フォールバックを含む指定は説明欄に保持）
+    - 角丸 `settings.border.radiusSizes` ⇔ `Theme Radius`（WordPress 6.9+）
+    - ビューポート `settings.viewport` ⇔ `Theme Viewport`（WordPress 7.1+）
+    - デュオトーン `settings.color.duotone` ⇔ `Theme Duotone`（`<名前>/shadow` と `<名前>/highlight` の組。パレットの色を参照可能）
+    - 可変フォントサイズ `fontSizes[].fluid` ⇔ `Theme Font Sizes`（Desktop / Mobile の2モード。エクスポート時に `settings.typography.fluid: true` を自動設定）
+    - インポート: スペーシング（`Theme Spacing`）とディメンション（`Theme Dimensions`）の取り込みに対応
+- スタイルバリエーションの出力に対応
+    - `Theme Colors` の2つ目以降のモード（Dark など）を `styles/<モード名>.json` として出力し、theme.json と合わせて zip でダウンロード
+- スラッグの保持
+    - 各プリセットのスラッグ（例: `spacing--20`）を Figma 側に保持し、名前とスラッグが異なるプリセットもエクスポートで元のスラッグに戻るように
+    - バリアブルは WEB コードシンタックス（例: `var(--wp--preset--spacing--20)`）、テキストスタイルは説明欄に保存
+- 改善
+    - インポートでドラッグ＆ドロップに対応、同じファイルの再選択でも読み込めるように
+    - 生成・インポートの完了やエラーを画面下のステータスに表示、タブ切り替えで表示をクリア
 - 修正
-    - インポート: フォントサイズの単位判定を修正（`2vw` や `1.5em` などが単位を無視して px として取り込まれていた問題。`px` / `rem` のみ取り込み、`size` が `clamp()` 等でも `fluid.max` が `px` / `rem` ならその値を使用。取り込めなかった項目は通知に表示）
-    - エクスポート: フォントサイズとして出力するテキストスタイルを `Typography/` 以下に限定（`Body/Bold` など他のスタイルが混ざらないように）
+    - インポート: フォントサイズの単位判定を修正（`2vw` や `1.5em` が px として取り込まれていた問題。`px` / `rem` のみ取り込み、取り込めなかった項目は通知に表示）
+    - エクスポート: フォントサイズとして出力するテキストスタイルを `Typography/` 以下に限定
+    - 環境によってプラグインが起動しない問題（`stack underflow`）を修正
 
 ### v1.2.0 (2026-04-19)
 - WordPress 7.0+ 対応（theme.json v3 の新機能）

@@ -1058,6 +1058,12 @@ async function generateThemeJson(schemaVersion: number, wpVersion: string) {
     const fluidPart = fluidBound > 0 ? `（可変サイズ: ${fluidBound}個）` : (fluidUnavailable ? '（可変サイズはモードが使えないためスキップ）' : '');
     const message = `生成完了！ カラー: ${createdColors}個, デュオトーン: ${createdDuotone}組, フォント: ${createdFontSizes}個${fluidPart}, フォントファミリー: ${createdFontFamilies}個, スペーシング: ${createdSpacing}個${dimensionPart}, レイアウト: ${createdLayout}個${radiusPart}${viewportPart}`;
     figma.notify(message);
+    return message;
+}
+
+// Show the result in the UI status bar (otherwise it keeps showing "…中")
+function postStatus(message: string) {
+    figma.ui.postMessage({ type: 'status', payload: message });
 }
 
 figma.ui.onmessage = async (msg) => {
@@ -1065,9 +1071,11 @@ figma.ui.onmessage = async (msg) => {
         try {
             await importThemeJson(msg.payload);
             figma.notify('Theme imported successfully!');
+            postStatus('インポート完了！');
         } catch (e: any) {
             console.error(e);
             figma.notify('Error importing theme: ' + e.message);
+            postStatus('エラー: インポートに失敗しました（' + e.message + '）');
         }
     } else if (msg.type === 'export-theme-json') {
         try {
@@ -1075,6 +1083,7 @@ figma.ui.onmessage = async (msg) => {
         } catch (e: any) {
             console.error(e);
             figma.notify('Error exporting theme: ' + e.message);
+            postStatus('エラー: エクスポートに失敗しました（' + e.message + '）');
         }
     } else if (msg.type === 'get-viewport-variables') {
         // Number variables in "Theme Viewport" collections, for the viewport selector in the export tab
@@ -1090,10 +1099,12 @@ figma.ui.onmessage = async (msg) => {
         try {
             const schemaVersion = msg.payload?.schemaVersion || 3;
             const wpVersion = msg.payload?.wpVersion || '6.6';
-            await generateThemeJson(schemaVersion, wpVersion);
+            const message = await generateThemeJson(schemaVersion, wpVersion);
+            postStatus(message);
         } catch (e: any) {
             console.error(e);
             figma.notify('Error generating theme: ' + e.message);
+            postStatus('エラー: 生成に失敗しました（' + e.message + '）');
         }
     }
 };

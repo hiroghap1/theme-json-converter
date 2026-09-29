@@ -88,7 +88,8 @@ const PRESETS: { key: string; label: string; schemaVersion: number; wpVersion: s
     { key: '3-7.1', label: 'Version 3 (WordPress 7.1+)', schemaVersion: 3, wpVersion: '7.1' },
 ];
 
-const DEFAULT_PRESET_KEY = '3-6.6';
+// Default to the latest preset (last row), so a newly added WP release becomes the default automatically
+const DEFAULT_PRESET_KEY = PRESETS[PRESETS.length - 1].key;
 
 const getPreset = (key: string) =>
     PRESETS.find(p => p.key === key) ?? PRESETS.find(p => p.key === DEFAULT_PRESET_KEY)!;
@@ -114,6 +115,7 @@ const App: React.FC = () => {
     const [generatePresetKey, setGeneratePresetKey] = useState<string>(DEFAULT_PRESET_KEY);
     const [status, setStatus] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Export options
     const [exportOptions, setExportOptions] = useState<ExportOptions>({
@@ -144,10 +146,7 @@ const App: React.FC = () => {
     const exportPreset = getPreset(exportOptions.presetKey);
     const generatePreset = getPreset(generatePresetKey);
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
+    const importFile = (file: File) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -160,6 +159,37 @@ const App: React.FC = () => {
             }
         };
         reader.readAsText(file);
+    };
+
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        // Reset so that selecting the same file again fires onChange (re-import)
+        event.target.value = '';
+        if (file) importFile(file);
+    };
+
+    const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();  // required to allow dropping
+        event.dataTransfer.dropEffect = 'copy';
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+        // Ignore leave events fired when moving over child elements
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setIsDragging(false);
+    };
+
+    const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        setIsDragging(false);
+        const file = event.dataTransfer.files?.[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith('.json')) {
+            setStatus('エラー: .json ファイルをドロップしてください');
+            return;
+        }
+        importFile(file);
     };
 
     React.useEffect(() => {
@@ -187,6 +217,8 @@ const App: React.FC = () => {
                 setStatus(variations.length > 0
                     ? `エクスポート完了！（theme.json + スタイルバリエーション ${variations.length}件）`
                     : 'エクスポート完了！');
+            } else if (type === 'status') {
+                setStatus(payload as string);
             } else if (type === 'viewport-variables') {
                 const list = payload as ViewportVariable[];
                 setViewportVariables(list);
@@ -205,8 +237,9 @@ const App: React.FC = () => {
         };
     }, []);
 
-    // Refresh the viewport variable list whenever the export tab is opened
+    // Clear the status bar when switching tabs, and refresh the viewport variable list on the export tab
     React.useEffect(() => {
+        setStatus('');
         if (activeTab === 'export') {
             parent.postMessage({ pluginMessage: { type: 'get-viewport-variables' } }, '*');
         }
@@ -308,7 +341,13 @@ const App: React.FC = () => {
                         <p style={styles.description}>
                             theme.jsonファイルをアップロードして、Figmaのバリアブルとスタイルを作成します。
                         </p>
-                        <div style={styles.uploadArea} onClick={() => fileInputRef.current?.click()}>
+                        <div
+                            style={{ ...styles.uploadArea, ...(isDragging ? styles.uploadAreaActive : {}) }}
+                            onClick={() => fileInputRef.current?.click()}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                        >
                             <FolderIcon color="#0073aa" size={40} />
                             <span style={styles.uploadText}>クリックしてファイルを選択</span>
                             <span style={styles.uploadHint}>または、ここにドロップ</span>
@@ -1036,6 +1075,10 @@ const styles: { [key: string]: React.CSSProperties } = {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         backgroundColor: '#f8fbfd',
+    },
+    uploadAreaActive: {
+        border: `2px dashed ${wpColors.blue}`,
+        backgroundColor: '#e8f3fa',
     },
     uploadText: {
         fontSize: '14px',
