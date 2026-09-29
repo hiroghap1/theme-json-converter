@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ThemeJson } from '../common/types';
+import { createZip } from './zip';
 
 // SVG Icons
 const ImportIcon: React.FC<{ color?: string; size?: number }> = ({ color = 'currentColor', size = 18 }) => (
@@ -59,7 +60,21 @@ interface ExportOptions {
     minWidth: OptionSetting;
     backgroundGradient: OptionSetting;
     blockVisibilityAllowEditing: OptionSetting;
-    viewport: OptionSetting<{ mobile: string; tablet: string }>;
+    viewport: ViewportOption;
+    styleVariations: boolean;  // Theme Colors の2つ目以降のモードを styles/*.json として出力
+}
+
+// viewport breakpoints: free input values, or a variable id per breakpoint ('' = use free input)
+interface ViewportOption extends OptionSetting<{ mobile: string; tablet: string }> {
+    variableIds: { mobile: string; tablet: string };
+}
+
+// Number variable in a "Theme Viewport" collection (sent from the plugin code)
+interface ViewportVariable {
+    id: string;
+    name: string;
+    label: string;
+    value: number;
 }
 
 type BooleanOptionKey = 'appearanceTools' | 'defaultPalette' | 'defaultGradients' | 'defaultDuotone' | 'defaultFontSizes' | 'defaultSpacingSizes' | 'width' | 'height' | 'minWidth' | 'backgroundGradient' | 'blockVisibilityAllowEditing';
@@ -115,8 +130,16 @@ const App: React.FC = () => {
         minWidth: { include: true, value: false },
         backgroundGradient: { include: true, value: false },
         blockVisibilityAllowEditing: { include: true, value: true },
-        viewport: { include: true, value: { mobile: '480px', tablet: '782px' } },
+        viewport: {
+            include: true,
+            value: { mobile: '480px', tablet: '782px' },
+            variableIds: { mobile: '', tablet: '' },
+        },
+        styleVariations: true,
     });
+    const [viewportVariables, setViewportVariables] = useState<ViewportVariable[]>([]);
+    // Once the user picks a viewport source by hand, stop auto-selecting variables named "mobile" / "tablet"
+    const viewportTouchedRef = useRef(false);
 
     const exportPreset = getPreset(exportOptions.presetKey);
     const generatePreset = getPreset(generatePresetKey);
@@ -146,17 +169,48 @@ const App: React.FC = () => {
             
             const { type, payload } = msg;
             if (type === 'export-theme-json-result') {
-                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const { theme, variations } = payload as { theme: any; variations: { fileName: string; json: any }[] };
+                const themeContent = JSON.stringify(theme, null, 2);
+                // With style variations, bundle theme.json and styles/*.json into a zip
+                const blob = variations.length > 0
+                    ? createZip([
+                        { name: 'theme.json', content: themeContent },
+                        ...variations.map(v => ({ name: `styles/${v.fileName}`, content: JSON.stringify(v.json, null, 2) })),
+                    ])
+                    : new Blob([themeContent], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'theme.json';
+                a.download = variations.length > 0 ? 'theme-json.zip' : 'theme.json';
                 a.click();
                 URL.revokeObjectURL(url);
-                setStatus('エクスポート完了！');
+                setStatus(variations.length > 0
+                    ? `エクスポート完了！（theme.json + スタイルバリエーション ${variations.length}件）`
+                    : 'エクスポート完了！');
+            } else if (type === 'viewport-variables') {
+                const list = payload as ViewportVariable[];
+                setViewportVariables(list);
+                setExportOptions(prev => {
+                    const ids = { ...prev.viewport.variableIds };
+                    for (const key of ['mobile', 'tablet'] as const) {
+                        // Drop selections whose variable no longer exists
+                        if (ids[key] && !list.some(v => v.id === ids[key])) ids[key] = '';
+                        if (!viewportTouchedRef.current && !ids[key]) {
+                            ids[key] = list.find(v => v.name.toLowerCase() === key)?.id ?? '';
+                        }
+                    }
+                    return { ...prev, viewport: { ...prev.viewport, variableIds: ids } };
+                });
             }
         };
     }, []);
+
+    // Refresh the viewport variable list whenever the export tab is opened
+    React.useEffect(() => {
+        if (activeTab === 'export') {
+            parent.postMessage({ pluginMessage: { type: 'get-viewport-variables' } }, '*');
+        }
+    }, [activeTab]);
 
     const handleExport = () => {
         const { schemaVersion, wpVersion } = getPreset(exportOptions.presetKey);
@@ -193,6 +247,14 @@ const App: React.FC = () => {
             viewport: field === 'include'
                 ? { ...prev.viewport, include: value as boolean }
                 : { ...prev.viewport, value: { ...prev.viewport.value, [field]: value as string } }
+        }));
+    };
+
+    const handleViewportVariableChange = (field: 'mobile' | 'tablet', variableId: string) => {
+        viewportTouchedRef.current = true;
+        setExportOptions(prev => ({
+            ...prev,
+            viewport: { ...prev.viewport, variableIds: { ...prev.viewport.variableIds, [field]: variableId } }
         }));
     };
 
@@ -749,38 +811,76 @@ const App: React.FC = () => {
                                             viewport を出力
                                         </label>
                                         {exportOptions.viewport.include && (
-                                            <div style={styles.valueSelector}>
-                                                <label style={styles.radioLabel}>
-                                                    mobile
-                                                    <input
-                                                        type="text"
-                                                        value={exportOptions.viewport.value.mobile}
-                                                        onChange={(e) => handleViewportChange('mobile', e.target.value)}
-                                                        placeholder="480px"
-                                                        style={{
-                                                            ...styles.textInput,
-                                                            ...(exportOptions.viewport.value.mobile && !VIEWPORT_PATTERN.test(exportOptions.viewport.value.mobile) ? styles.textInputError : {}),
-                                                        }}
-                                                    />
-                                                </label>
-                                                <label style={styles.radioLabel}>
-                                                    tablet
-                                                    <input
-                                                        type="text"
-                                                        value={exportOptions.viewport.value.tablet}
-                                                        onChange={(e) => handleViewportChange('tablet', e.target.value)}
-                                                        placeholder="782px"
-                                                        style={{
-                                                            ...styles.textInput,
-                                                            ...(exportOptions.viewport.value.tablet && !VIEWPORT_PATTERN.test(exportOptions.viewport.value.tablet) ? styles.textInputError : {}),
-                                                        }}
-                                                    />
-                                                </label>
+                                            <div style={{ ...styles.valueSelector, flexDirection: 'column', gap: '6px' }}>
+                                                <div style={styles.viewportField}>
+                                                    <span style={styles.viewportFieldLabel}>mobile</span>
+                                                    <select
+                                                        value={exportOptions.viewport.variableIds.mobile}
+                                                        onChange={(e) => handleViewportVariableChange('mobile', e.target.value)}
+                                                        style={styles.smallSelect}
+                                                    >
+                                                        <option value="">自由入力</option>
+                                                        {viewportVariables.map(v => (
+                                                            <option key={v.id} value={v.id}>{v.label} ({v.value}px)</option>
+                                                        ))}
+                                                    </select>
+                                                    {!exportOptions.viewport.variableIds.mobile && (
+                                                        <input
+                                                            type="text"
+                                                            value={exportOptions.viewport.value.mobile}
+                                                            onChange={(e) => handleViewportChange('mobile', e.target.value)}
+                                                            placeholder="480px"
+                                                            style={{
+                                                                ...styles.textInput,
+                                                                ...(exportOptions.viewport.value.mobile && !VIEWPORT_PATTERN.test(exportOptions.viewport.value.mobile) ? styles.textInputError : {}),
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div style={styles.viewportField}>
+                                                    <span style={styles.viewportFieldLabel}>tablet</span>
+                                                    <select
+                                                        value={exportOptions.viewport.variableIds.tablet}
+                                                        onChange={(e) => handleViewportVariableChange('tablet', e.target.value)}
+                                                        style={styles.smallSelect}
+                                                    >
+                                                        <option value="">自由入力</option>
+                                                        {viewportVariables.map(v => (
+                                                            <option key={v.id} value={v.id}>{v.label} ({v.value}px)</option>
+                                                        ))}
+                                                    </select>
+                                                    {!exportOptions.viewport.variableIds.tablet && (
+                                                        <input
+                                                            type="text"
+                                                            value={exportOptions.viewport.value.tablet}
+                                                            onChange={(e) => handleViewportChange('tablet', e.target.value)}
+                                                            placeholder="782px"
+                                                            style={{
+                                                                ...styles.textInput,
+                                                                ...(exportOptions.viewport.value.tablet && !VIEWPORT_PATTERN.test(exportOptions.viewport.value.tablet) ? styles.textInputError : {}),
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 </>
                             )}
+
+                            <p style={styles.optionGroupTitle}>スタイルバリエーション:</p>
+                            <div style={styles.optionRow}>
+                                <label style={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={exportOptions.styleVariations}
+                                        onChange={(e) => setExportOptions(prev => ({ ...prev, styleVariations: e.target.checked }))}
+                                        style={styles.checkbox}
+                                    />
+                                    Theme Colors の2つ目以降のモードを styles/*.json として出力
+                                </label>
+                                <p style={styles.optionHint}>バリエーションがある場合は theme.json と合わせて zip でダウンロードします。</p>
+                            </div>
                         </div>
 
                         <button style={styles.primaryButton} onClick={handleExport}>
@@ -812,9 +912,15 @@ const App: React.FC = () => {
                             <p style={styles.featureTitle}>作成されるもの:</p>
                             <ul style={styles.featureItems}>
                                 <li>カラーパレット（バリアブル）</li>
+                                <li>デュオトーン（カラーを参照するバリアブル）</li>
                                 <li>フォントサイズ（テキストスタイル）</li>
+                                {generatePreset.schemaVersion >= 3 && <li>可変フォントサイズ Desktop / Mobile（バリアブル）</li>}
+                                <li>フォントファミリー（バリアブル）</li>
                                 <li>スペーシング（バリアブル）</li>
+                                <li>レイアウト幅 contentSize / wideSize（バリアブル）</li>
+                                {wpAtLeast(generatePreset.wpVersion, '6.9') && <li>角丸（バリアブル）</li>}
                                 {wpAtLeast(generatePreset.wpVersion, '7.0') && <li>ディメンション（バリアブル）</li>}
+                                {wpAtLeast(generatePreset.wpVersion, '7.1') && <li>ビューポート mobile / tablet（バリアブル）</li>}
                             </ul>
                         </div>
                         <button style={styles.primaryButton} onClick={handleGenerate}>
@@ -1065,6 +1171,31 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '12px',
         border: '1px solid #d0d0d0',
         borderRadius: '4px',
+        outline: 'none',
+    },
+    optionHint: {
+        margin: '0 0 0 24px',
+        fontSize: '11px',
+        color: '#888',
+    },
+    viewportField: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontSize: '12px',
+        color: '#555',
+    },
+    viewportFieldLabel: {
+        width: '40px',
+    },
+    smallSelect: {
+        flex: 1,
+        minWidth: 0,
+        padding: '2px 4px',
+        fontSize: '12px',
+        border: '1px solid #d0d0d0',
+        borderRadius: '4px',
+        backgroundColor: '#fff',
         outline: 'none',
     },
     textInputError: {

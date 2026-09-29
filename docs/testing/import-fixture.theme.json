@@ -1,0 +1,58 @@
+{
+    "$schema": "https://schemas.wp.org/wp/7.1/theme.json",
+    "version": 3,
+    "settings": {
+        "color": {
+            "palette": [
+                { "slug": "base", "name": "Base", "color": "#FFFFFF" },
+                { "slug": "contrast", "name": "Contrast", "color": "#111111" },
+                { "slug": "brand-main", "name": "Brand", "color": "#0073aa" },
+                { "slug": "short-hex", "name": "Short Hex", "color": "#f60" },
+                { "slug": "translucent", "name": "Translucent", "color": "rgba(0, 0, 0, 0.5)" }
+            ],
+            "duotone": [
+                { "slug": "mono", "name": "Mono", "colors": ["#111111", "#FFFFFF"] },
+                { "slug": "sunset", "name": "Sunset", "colors": ["#8c00b7", "#fcff41"] }
+            ]
+        },
+        "typography": {
+            "fontFamilies": [
+                { "slug": "body", "name": "Body Font", "fontFamily": "\"Noto Sans JP\", sans-serif" },
+                { "slug": "code", "name": "Code", "fontFamily": "ui-monospace, monospace" }
+            ],
+            "fontSizes": [
+                { "slug": "small", "name": "Small", "size": "14px" },
+                { "slug": "medium", "name": "Medium", "size": "1rem" },
+                { "slug": "large", "name": "Large", "size": "1.5rem", "fluid": { "min": "1.25rem", "max": "1.5rem" } },
+                { "slug": "huge", "name": "Huge", "size": "clamp(2rem, 4vw, 3rem)", "fluid": { "min": "2rem", "max": "3rem" } },
+                { "slug": "hero", "name": "Hero", "size": "4vw" }
+            ]
+        },
+        "spacing": {
+            "spacingSizes": [
+                { "slug": "20", "name": "Tiny", "size": "10px" },
+                { "slug": "30", "name": "Small", "size": "1.25rem" },
+                { "slug": "40", "name": "Fluid", "size": "clamp(1rem, 2vw, 2rem)" }
+            ]
+        },
+        "dimensions": {
+            "dimensionSizes": [
+                { "slug": "card", "name": "Card Width", "size": "320px" }
+            ]
+        },
+        "layout": {
+            "contentSize": "645px",
+            "wideSize": "min(1340px, 90vw)"
+        },
+        "border": {
+            "radiusSizes": [
+                { "slug": "sm", "name": "Small Radius", "size": "4px" },
+                { "slug": "pill", "name": "Pill", "size": "9999px" }
+            ]
+        },
+        "viewport": {
+            "mobile": "600px",
+            "tablet": "60em"
+        }
+    }
+}
