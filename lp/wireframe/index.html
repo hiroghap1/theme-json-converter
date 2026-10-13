@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LP ワイヤーフレーム｜WP theme-json Converter</title>
+<link rel="stylesheet" href="wireframe.css">
+</head>
+<body>
+
+<div class="toolbar" role="toolbar" aria-label="ワイヤー表示切替">
+    <strong>LP ワイヤーフレーム</strong>
+    <span class="meta">WP theme-json Converter ／ v0.2 ／ 2026-10-13</span>
+    <span class="spacer"></span>
+    <div class="seg" aria-label="言語">
+        <a href="index.html" data-lang-link aria-current="page">日本語</a>
+        <a href="en.html" data-lang-link>English</a>
+    </div>
+    <div class="seg" aria-label="表示幅">
+        <button type="button" data-view="pc" aria-pressed="true">PC 1200</button>
+        <button type="button" data-view="sp" aria-pressed="false">SP 375</button>
+    </div>
+    <button type="button" id="toggle-notes" aria-pressed="true">注釈を表示</button>
+</div>
+
+<div class="board">
+<div class="page">
+
+    <!-- ========== Cover（ワイヤーの前提） ========== -->
+    <div class="cover">
+        <div>
+            <h1>WP theme-json Converter ― LP 構成案</h1>
+            <p>グレーの枠内が LP 本体、右の黄色い付箋が各セクションの意図とメモです。コピーはすべて仮。</p>
+            <dl>
+                <dt>ゴール</dt><dd>Figma Community のプラグインページへ送客 → インストール</dd>
+                <dt>主CTA</dt><dd>「Figma Community で入手する」（ヘッダー／FV／最終CTA の3か所）</dd>
+                <dt>料金</dt><dd>無料（FV・最終CTA のマイクロコピーと FAQ で明記）</dd>
+                <dt>公開URL</dt><dd>stella-create.co.jp/tools/wp-theme-json-converter/<br>英語版 …/wp-theme-json-converter/en/（スラッグは仮）</dd>
+                <dt>言語</dt><dd>日本語・英語の2ページ。構成は共通（英語版ワイヤーは上部の English）</dd>
+                <dt>ターゲット</dt><dd>WordPress ブロックテーマを Figma でデザインするデザイナー・制作者、テーマ開発者</dd>
+                <dt>トーン</dt><dd>実務的・技術に明るい。誇張より「何がどう変換されるか」を正確に</dd>
+            </dl>
+            <div class="legend">
+                <span><i class="ph-i"></i>画像・動画の仮置き</span>
+                <span><i class="tag-i"></i>セクション番号</span>
+                <span><i class="note-i"></i>注釈（付箋）</span>
+            </div>
+        </div>
+        <ol>
+            <li><a href="#s01"><b>01</b>ヘッダー</a></li>
+            <li><a href="#s02"><b>02</b>ファーストビュー</a></li>
+            <li><a href="#s03"><b>03</b>課題提起</a></li>
+            <li><a href="#s04"><b>04</b>3つのモード（概要）</a></li>
+            <li><a href="#s05"><b>05</b>機能詳細</a></li>
+            <li><a href="#s06"><b>06</b>変換対応表</a></li>
+            <li><a href="#s07"><b>07</b>対応バージョン</a></li>
+            <li><a href="#s08"><b>08</b>使い方</a></li>
+            <li><a href="#s09"><b>09</b>こんな方に</a></li>
+            <li><a href="#s10"><b>10</b>よくある質問</a></li>
+            <li><a href="#s11"><b>11</b>更新履歴</a></li>
+            <li><a href="#s12"><b>12</b>最終CTA</a></li>
+            <li><a href="#s13"><b>13</b>フッター</a></li>
+        </ol>
+    </div>
+
+    <!-- ========== 01 Header ========== -->
+    <section class="wf" id="s01">
+        <span class="tag">01 HEADER</span>
+        <div class="hdr">
+            <div class="logo"><div class="ph icon"><span>icon</span></div>WP theme-json Converter</div>
+            <nav><span>機能</span><span>対応表</span><span>対応バージョン</span><span>使い方</span><span>FAQ</span></nav>
+            <span class="lang">English</span>
+            <a class="btn primary sm">Figma で入手</a>
+            <span class="burger" aria-hidden="true"></span>
+        </div>
+    </section>
+    <div class="note-group">
+    <aside class="note">
+        <h3><b>01</b>ヘッダー</h3>
+        <dl>
+            <dt>仕様</dt>
+            <dd>スクロール追従。ナビは各セクションへのページ内リンク。</dd>
+            <dt>言語切替</dt>
+            <dd>英語版（…/en/）へのリンク。<code>hreflang</code> で日英を相互に指定。</dd>
+            <dt>SP</dt>
+            <dd>ナビ・言語切替はハンバーガーに格納。CTA ボタンはハンバーガー内＋FV に任せる。</dd>
+            <dt>素材</dt>
+            <dd>プラグインアイコン（高解像度版）</dd>
+        </dl>
+        <p class="todo">コーポレートサイト（stella-create.co.jp）の共通ヘッダー・フッターを使うか、LP 専用にするか</p>
+    </aside>
+    <aside class="note">
+        <h3><b>02</b>ファーストビュー</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>「theme.json ⇄ Figma の変換ツール」だと3秒で伝わること。</dd>
+            <dt>CTA</dt>
+            <dd>主：Figma Community／副：08 使い方へスクロール。直下に「無料」を明記。</dd>
+            <dt>ビジュアル案</dt>
+            <dd>A) 図解（左のコード ⇄ 右のバリアブル）※現状<br>B) 実際の操作を10秒ループ動画で</dd>
+            <dt>SP</dt>
+            <dd>コピー → CTA（縦積み・全幅）→ 図解（縦並び）の順。</dd>
+        </dl>
+    </aside>
+    </div>
+
+    <!-- ========== 02 Hero ========== -->
+    <section class="wf" id="s02">
+        <span class="tag">02 HERO</span>
+        <div class="inner hero">
+            <div>
+                <span class="chip">Figma プラグイン ｜ WordPress 7.1 対応</span>
+                <h1>theme.json と<br>Figma を、双方向に。</h1>
+                <p>WordPress ブロックテーマのデザイントークンを Figma のバリアブルへ。Figma で作ったデザインシステムを theme.json へ。インポート・エクスポート・生成の3つのモードで、デザインと実装のズレをなくします。</p>
+                <div class="ctas">
+                    <a class="btn primary">Figma Community で入手する</a>
+                    <a class="btn">使い方を見る ↓</a>
+                </div>
+                <div class="micro">無料 ｜ Figma のデザインファイルで動作します</div>
+                <div class="chips">
+                    <span class="chip">theme.json version 1〜3</span>
+                    <span class="chip">WordPress 5.8〜7.1</span>
+                    <span class="chip">ダークモード → スタイルバリエーション</span>
+                </div>
+            </div>
+            <div class="flow" aria-label="theme.json と Figma の相互変換の図">
+                <div class="box">
+                    <div class="box-h">theme.json</div>
+<pre>{
+  "version": 3,
+  "settings": {
+    "color": {
+      "palette": […]
+    },
+    "spacing": {
+      "spacingSizes": […]
+    },
+    "typography": {
+      "fontSizes": […]
+    }
+  }
+}</pre>
+                </div>
+                <div class="swap">
+                    <span>Import</span>
+                    <span class="arrow">⇄</span>
+                    <span>Export</span>
+                </div>
+                <div class="box">
+                    <div class="box-h">Figma Variables</div>
+                    <ul class="vars">
+                        <li class="grp">Theme Colors</li>
+                        <li><i></i>Base</li>
+                        <li><i></i>Contrast</li>
+                        <li><i></i>Accent 1</li>
+                        <li class="grp">Theme Spacing</li>
+                        <li><i></i>20 ｜ 8px</li>
+                        <li><i></i>30 ｜ 12px</li>
+                        <li class="grp">Typography/</li>
+                        <li><i></i>medium ｜ 20px</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== 03 Problem ========== -->
+    <section class="wf alt" id="s03">
+        <span class="tag">03 PROBLEM</span>
+        <div class="inner problem">
+            <span class="eyebrow">PROBLEM</span>
+            <h2 class="sec">デザインと実装で、<br>トークンがズレていませんか？</h2>
+            <p class="lead">ブロックテーマ制作でよくある「手作業の往復」。</p>
+            <div class="cols-3">
+                <div class="card">
+                    <div class="ph round"><span>イラスト</span></div>
+                    <h3>Figma の色や余白を<br class="pc">theme.json に手で転記している</h3>
+                    <p>スラッグの付け間違いや値の転記ミスが起きやすい。</p>
+                </div>
+                <div class="card">
+                    <div class="ph round"><span>イラスト</span></div>
+                    <h3>既存テーマの theme.json を<br class="pc">Figma で再現するのが大変</h3>
+                    <p>パレットやフォントサイズを1つずつ作り直している。</p>
+                </div>
+                <div class="card">
+                    <div class="ph round"><span>イラスト</span></div>
+                    <h3>WordPress のバージョンごとの<br class="pc">設定差分を追いきれない</h3>
+                    <p>角丸・ディメンション・ビューポートなど、新しい設定が増え続ける。</p>
+                </div>
+            </div>
+            <p class="bridge">その往復、プラグインでまとめて自動化できます。</p>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>03</b>課題提起</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>ターゲットの「あるある」で自分ごと化 → 04 の解決策へつなぐ。</dd>
+            <dt>要素</dt>
+            <dd>悩みカード×3（イラスト＋見出し＋1行補足）、橋渡しコピー。</dd>
+            <dt>SP</dt>
+            <dd>カードは横並び（イラスト左・テキスト右）で縦積み。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 04 Modes ========== -->
+    <section class="wf" id="s04">
+        <span class="tag">04 SOLUTION</span>
+        <div class="inner">
+            <span class="eyebrow">FEATURES</span>
+            <h2 class="sec">3つのモードで、行き来を自動化</h2>
+            <p class="lead">プラグインを開いてタブを選ぶだけ。読み込み・書き出し・ゼロからの作成に対応します。</p>
+            <div class="cols-3">
+                <div class="card mode">
+                    <div class="mode-head"><span class="num">01</span><div class="ph icon"><span>icon</span></div></div>
+                    <div class="dir">theme.json → Figma</div>
+                    <h3>インポート</h3>
+                    <p>theme.json をドラッグ＆ドロップ。カラー・スペーシング・フォントなどはバリアブルに、フォントサイズはテキストスタイルになります。</p>
+                    <span class="more">詳しく見る ↓</span>
+                </div>
+                <div class="card mode">
+                    <div class="mode-head"><span class="num">02</span><div class="ph icon"><span>icon</span></div></div>
+                    <div class="dir">Figma → theme.json</div>
+                    <h3>エクスポート</h3>
+                    <p>Figma のバリアブルとスタイルから theme.json を書き出し。設定項目ごとに出力の有無と値を選べます。</p>
+                    <span class="more">詳しく見る ↓</span>
+                </div>
+                <div class="card mode">
+                    <div class="mode-head"><span class="num">03</span><div class="ph icon"><span>icon</span></div></div>
+                    <div class="dir">ゼロから → Figma</div>
+                    <h3>生成</h3>
+                    <p>WordPress のバージョンを選ぶだけで、スターター用のバリアブルとテキストスタイルを一式作成します。</p>
+                    <span class="more">詳しく見る ↓</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>04</b>3つのモード（概要）</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>機能の全体像を一望させる。詳細は 05 へアンカー。</dd>
+            <dt>要素</dt>
+            <dd>プラグインの3タブ（インポート／エクスポート／生成）に対応したカード。変換の向きを明示。</dd>
+            <dt>素材</dt>
+            <dd>アイコン×3。プラグイン UI のタブアイコン（<code>src/ui/App.tsx</code> の ImportIcon / ExportIcon / GenerateIcon）を流用できる。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 05 Feature detail ========== -->
+    <section class="wf alt" id="s05">
+        <span class="tag">05 DETAIL</span>
+        <div class="inner">
+            <div class="feature">
+                <div>
+                    <span class="label">01 IMPORT</span>
+                    <h3>theme.json を読み込むだけで、<br>Figma にトークンが揃う</h3>
+                    <p>既存テーマの theme.json から、バリアブルとテキストスタイルを自動作成します。</p>
+                    <ul class="checks">
+                        <li>ドラッグ＆ドロップで読み込み</li>
+                        <li>カラー・デュオトーン・スペーシング・ディメンション・レイアウト幅・フォントファミリー・角丸・ビューポートをバリアブルに</li>
+                        <li>可変フォントサイズ（fluid）は Desktop / Mobile の2モードに<small>テキストスタイルのフォントサイズにバインド</small></li>
+                        <li>同名のバリアブルは値を更新、なければ新規作成</li>
+                        <li>スラッグ（例: <code>spacing--20</code>）を保持</li>
+                    </ul>
+                </div>
+                <div class="media">
+                    <div class="ph shot"><span>スクリーンショット<br>インポートタブ＋作成された Variables パネル</span></div>
+                </div>
+            </div>
+
+            <div class="feature rev">
+                <div>
+                    <span class="label">02 EXPORT</span>
+                    <h3>Figma のデザインシステムを、<br>そのまま theme.json に</h3>
+                    <p>出力したい設定を選んで書き出すだけ。ブロックテーマにそのまま渡せます。</p>
+                    <ul class="checks">
+                        <li>appearanceTools・defaultPalette・textIndent・viewport など、項目ごとに出力の有無と値を設定</li>
+                        <li>Theme Colors の追加モード（Dark など）をスタイルバリエーション <code>styles/*.json</code> として zip 出力</li>
+                        <li>インポート時のスラッグに戻して出力</li>
+                        <li>対象 WordPress バージョンに合わせた <code>$schema</code></li>
+                    </ul>
+                </div>
+                <div class="media">
+                    <div class="ph shot"><span>スクリーンショット<br>エクスポートタブ（オプション一覧）</span></div>
+                    <div class="sub">
+                        <div class="tree mono">theme-json.zip
+├ theme.json
+└ styles/
+   └ Dark.json</div>
+                        <div class="ph"><span>出力 JSON の抜粋</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature">
+                <div>
+                    <span class="label">03 GENERATE</span>
+                    <h3>バージョンを選ぶだけで、<br>スターターセットを作成</h3>
+                    <p>新しいテーマを始めるときの土台づくりに。WordPress のバージョンに合わせた項目を一式用意します。</p>
+                    <ul class="checks">
+                        <li>カラーパレット・デュオトーン・フォントサイズ・フォントファミリー・スペーシング・レイアウト幅</li>
+                        <li>version 3 では可変フォントサイズ（Desktop / Mobile）も</li>
+                        <li>WordPress 6.9+ で角丸、7.0+ でディメンション、7.1+ でビューポートを追加</li>
+                    </ul>
+                </div>
+                <div class="media">
+                    <div class="ph shot"><span>スクリーンショット<br>生成タブ（バージョン選択＋作成されるもの一覧）</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>05</b>機能詳細</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>04 の各モードを「何がどうなるか」まで具体化。検討層の不安を潰す。</dd>
+            <dt>構成</dt>
+            <dd>テキスト／画像を左右交互に3ブロック。</dd>
+            <dt>素材</dt>
+            <dd><ul>
+                <li>各タブのスクリーンショット（UI 単体＋Figma 画面の合成）</li>
+                <li>zip の中身、出力 JSON の抜粋</li>
+            </ul></dd>
+            <dt>SP</dt>
+            <dd>テキスト → 画像の順で統一。</dd>
+        </dl>
+        <p>画像は支給（README「画像リスト」）。zip の中身と JSON 抜粋はテキストで組む。</p>
+    </aside>
+
+    <!-- ========== 06 Mapping table ========== -->
+    <section class="wf" id="s06">
+        <span class="tag">06 MAPPING</span>
+        <div class="inner">
+            <span class="eyebrow">MAPPING</span>
+            <h2 class="sec">theme.json と Figma の対応表</h2>
+            <p class="lead">どの設定が Figma のどこに入るのかを一覧で。</p>
+            <p class="scroll-hint">← 横にスクロールできます →</p>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>theme.json</th><th>Figma</th><th>種類</th><th>対象バージョン</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>settings.color.palette</code></td><td>Theme Colors</td><td>カラーバリアブル</td><td>すべて</td></tr>
+                        <tr><td><code>settings.color.duotone</code></td><td>Theme Duotone<br><small>&lt;名前&gt;/shadow ・ /highlight</small></td><td>カラーバリアブル（パレット参照可）</td><td>すべて</td></tr>
+                        <tr><td><code>settings.typography.fontSizes</code></td><td>Typography/ 以下</td><td>テキストスタイル</td><td>すべて</td></tr>
+                        <tr><td><code>fontSizes[].fluid</code></td><td>Theme Font Sizes<br><small>Desktop / Mobile モード</small></td><td>数値バリアブル</td><td>Version 3〜</td></tr>
+                        <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>文字列バリアブル</td><td>すべて</td></tr>
+                        <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>数値バリアブル</td><td>Version 2〜</td></tr>
+                        <tr><td><code>settings.layout.contentSize</code> / <code>wideSize</code></td><td>Theme Layout</td><td>数値バリアブル</td><td>すべて</td></tr>
+                        <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>数値バリアブル</td><td>WordPress 6.9+</td></tr>
+                        <tr><td><code>settings.dimensions.dimensionSizes</code></td><td>Theme Dimensions</td><td>数値バリアブル</td><td>WordPress 7.0+</td></tr>
+                        <tr><td><code>settings.viewport</code></td><td>Theme Viewport<br><small>mobile / tablet</small></td><td>数値バリアブル</td><td>WordPress 7.1+</td></tr>
+                        <tr><td><code>styles/&lt;モード名&gt;.json</code></td><td>Theme Colors の2つ目以降のモード</td><td>スタイルバリエーション</td><td>エクスポートのみ</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="table-note">※ 対象バージョン＝エクスポート・生成で選ぶプリセット。インポートはバージョンに関係なく、theme.json にある項目を取り込みます。</p>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>06</b>変換対応表</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>技術者向けの信頼担保。「自分の theme.json の項目は扱えるか」をここで判断できるように。</dd>
+            <dt>SP</dt>
+            <dd>表は横スクロール（ヒント表示）。カード化も検討可。</dd>
+            <dt>運用</dt>
+            <dd>対応項目が増えたら README の How It Works と同時に更新。</dd>
+        </dl>
+        <p class="todo">「対象バージョン」はプラグインのプリセット基準（現行コードで確認済み）。WordPress 本体での初出バージョンも併記するか</p>
+    </aside>
+
+    <!-- ========== 07 Versions ========== -->
+    <section class="wf alt" id="s07">
+        <span class="tag">07 VERSIONS</span>
+        <div class="inner">
+            <span class="eyebrow">COMPATIBILITY</span>
+            <h2 class="sec">WordPress 5.8 から 7.1 まで</h2>
+            <p class="lead">theme.json の version 1〜3 に対応。エクスポートと生成では、選んだバージョンで使える設定だけを扱います。</p>
+            <ol class="timeline">
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 1</div>
+                    <div class="wp">WordPress 5.8+</div>
+                    <div class="adds">基本のカラー・フォントサイズ</div>
+                </li>
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 2</div>
+                    <div class="wp">WordPress 5.9+</div>
+                    <div class="adds">＋ スペーシング</div>
+                </li>
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 6.6+</div>
+                    <div class="adds">＋ アクセントカラー・可変フォントサイズ</div>
+                </li>
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 7.0+</div>
+                    <div class="adds">＋ 角丸・ディメンション・textIndent</div>
+                </li>
+                <li class="now">
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 7.1+</div>
+                    <div class="adds">＋ ビューポート ほか</div>
+                    <span class="chip">最新・初期値</span>
+                </li>
+            </ol>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>07</b>対応バージョン</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>「自分の環境で使えるか」を即判断。最新 WP への追従の早さも訴求。</dd>
+            <dt>運用</dt>
+            <dd><code>src/ui/App.tsx</code> の <code>PRESETS</code> と連動。新バージョン追加・古いプリセット整理のたびに更新する。</dd>
+            <dt>SP</dt>
+            <dd>タイムラインを縦向きに。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 08 How to ========== -->
+    <section class="wf" id="s08">
+        <span class="tag">08 HOW TO</span>
+        <div class="inner">
+            <span class="eyebrow">HOW TO USE</span>
+            <h2 class="sec">使い方は3ステップ</h2>
+            <p class="lead">インストールから書き出しまで、数分で完了します。</p>
+            <div class="cols-3 steps">
+                <div class="step">
+                    <div class="ph"><span>Figma Community の<br>プラグインページ</span></div>
+                    <span class="no">STEP 1</span>
+                    <h3>プラグインを追加</h3>
+                    <p>Figma Community から「WP theme-json Converter」を追加します。</p>
+                </div>
+                <div class="step">
+                    <div class="ph"><span>プラグイン UI<br>3つのタブ</span></div>
+                    <span class="no">STEP 2</span>
+                    <h3>モードを選ぶ</h3>
+                    <p>デザインファイルでプラグインを起動し、インポート／エクスポート／生成のタブを選びます。</p>
+                </div>
+                <div class="step">
+                    <div class="ph"><span>完了ステータス or<br>ダウンロード</span></div>
+                    <span class="no">STEP 3</span>
+                    <h3>読み込む・書き出す</h3>
+                    <p>theme.json を読み込むか、設定を選んで書き出します。結果は画面下のステータスに表示されます。</p>
+                </div>
+            </div>
+            <div class="ph video"><span>▶ 操作デモ動画（60〜90秒）<br>インポート → 編集 → エクスポートの一連の流れ</span></div>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>08</b>使い方</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>導入ハードルの低さを見せる。FV の副CTA「使い方を見る」の着地点。</dd>
+            <dt>素材</dt>
+            <dd>各ステップの画像、デモ動画（YouTube 埋め込み or mp4 を自前ホスト）</dd>
+        </dl>
+        <p class="todo">デモ動画を作るか（作らない場合はステップ画像のみで成立させる）</p>
+    </aside>
+
+    <!-- ========== 09 Use cases ========== -->
+    <section class="wf alt" id="s09">
+        <span class="tag">09 USE CASES</span>
+        <div class="inner">
+            <span class="eyebrow">USE CASES</span>
+            <h2 class="sec solo">こんな方におすすめ</h2>
+            <div class="cols-3">
+                <div class="card persona">
+                    <div class="ph round"><span>人物</span></div>
+                    <div>
+                        <h3>ブロックテーマを Figma でデザインする方</h3>
+                        <p>WordPress で使える値のまま、正確なトークンでデザインできます。</p>
+                    </div>
+                </div>
+                <div class="card persona">
+                    <div class="ph round"><span>人物</span></div>
+                    <div>
+                        <h3>デザインシステムを WordPress と同期したいチーム</h3>
+                        <p>Figma 側の変更を theme.json に反映し、ズレを防ぎます。</p>
+                    </div>
+                </div>
+                <div class="card persona">
+                    <div class="ph round"><span>人物</span></div>
+                    <div>
+                        <h3>新しいテーマを素早く立ち上げたい方</h3>
+                        <p>WordPress の標準的なプリセットから、すぐにデザインを始められます。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>09</b>こんな方に</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>README の Use Cases をペルソナ化。自分向けかの最終確認。</dd>
+            <dt>メモ</dt>
+            <dd>利用者の声が集まったら「導入事例・レビュー」に差し替え/追加。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 10 FAQ ========== -->
+    <section class="wf" id="s10">
+        <span class="tag">10 FAQ</span>
+        <div class="inner">
+            <span class="eyebrow">FAQ</span>
+            <h2 class="sec solo">よくある質問</h2>
+            <div class="faq">
+                <details open>
+                    <summary>料金はかかりますか？</summary>
+                    <div class="a">無料でお使いいただけます。</div>
+                </details>
+                <details open>
+                    <summary>すでにあるバリアブルは上書きされますか？</summary>
+                    <div class="a">同じ名前のコレクション・バリアブルがある場合は値を更新し、ない場合は新しく作成します。</div>
+                </details>
+                <details>
+                    <summary>ダークモードは扱えますか？</summary>
+                    <div class="a">Theme Colors コレクションの2つ目以降のモード（Dark など）を、スタイルバリエーション <code>styles/&lt;モード名&gt;.json</code> として theme.json と一緒に zip で書き出します。</div>
+                </details>
+                <details>
+                    <summary>どの WordPress バージョンに対応していますか？</summary>
+                    <div class="a">theme.json の version 1〜3（WordPress 5.8〜7.1）に対応しています。</div>
+                </details>
+                <details>
+                    <summary>vw や em で指定したフォントサイズは読み込めますか？</summary>
+                    <div class="a">フォントサイズは px と rem に対応しています。読み込めなかった項目は完了時の通知に表示されます。</div>
+                </details>
+                <details>
+                    <summary>FigJam や Dev Mode でも使えますか？</summary>
+                    <div class="a">Figma のデザインファイルで動作します。FigJam・Dev Mode には対応していません。</div>
+                </details>
+                <details>
+                    <summary>英語でも使えますか？</summary>
+                    <div class="a">はい。プラグインの画面は日本語と英語に対応しています。ヘッダーで切り替えられ、選んだ言語は次回以降も保持されます。</div>
+                </details>
+            </div>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>10</b>よくある質問</h3>
+        <dl>
+            <dt>仕様</dt>
+            <dd>アコーディオン。最初の2問は開いた状態で表示。</dd>
+            <dt>回答の根拠</dt>
+            <dd>上書き・単位・ダークモード・対応範囲は現行コード（v1.5.0）の挙動から記載。</dd>
+            <dt>メモ</dt>
+            <dd>問い合わせが多い質問が出てきたら追加。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 11 Changelog ========== -->
+    <section class="wf alt" id="s11">
+        <span class="tag">11 CHANGELOG</span>
+        <div class="inner">
+            <span class="eyebrow">CHANGELOG</span>
+            <h2 class="sec solo">更新履歴</h2>
+            <div class="log">
+                <div class="log-item">
+                    <div class="ver">v1.5.0<span class="date">2026-10-14</span></div>
+                    <ul><li>英語に対応（プラグインの画面と通知。ヘッダーで日本語 / English を切り替え）</li></ul>
+                </div>
+                <div class="log-item">
+                    <div class="ver">v1.4.0<span class="date">2026-09-30</span></div>
+                    <ul>
+                        <li>レイアウト幅・フォントファミリー・角丸・ビューポート・デュオトーン・可変フォントサイズの相互変換に対応</li>
+                        <li>スタイルバリエーション（styles/*.json）の zip 出力に対応</li>
+                        <li>スラッグの保持、インポートのドラッグ＆ドロップ対応 ほか</li>
+                    </ul>
+                </div>
+                <div class="log-item">
+                    <div class="ver">v1.3.0<span class="date">2026-09-26</span></div>
+                    <ul><li>WordPress 7.1 に対応</li></ul>
+                </div>
+            </div>
+            <div class="center"><a class="btn sm">すべての更新履歴</a></div>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>11</b>更新履歴</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>継続的にメンテされていることの証明（WP の新バージョンへの追従）。</dd>
+            <dt>仕様</dt>
+            <dd>直近3件のみ要約表示。「すべて」は Figma Community の説明 or 別ページへ。</dd>
+        </dl>
+        <p class="todo">「すべての更新履歴」のリンク先（別ページを作るか）</p>
+    </aside>
+
+    <!-- ========== 12 Final CTA ========== -->
+    <section class="wf dark" id="s12">
+        <span class="tag">12 CTA</span>
+        <div class="inner final">
+            <h2>デザインと実装の往復を、もっと短く。</h2>
+            <p>theme.json と Figma のあいだの手作業を、今日から減らしましょう。</p>
+            <a class="btn primary">Figma Community で入手する</a>
+            <p class="micro">無料</p>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>12</b>最終CTA</h3>
+        <dl>
+            <dt>目的</dt>
+            <dd>読み終えた人の受け皿。FV と同じ CTA 文言・同じ遷移先にそろえる。</dd>
+            <dt>見た目</dt>
+            <dd>背景色を反転させてページ内で一番強いブロックに。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 13 Footer ========== -->
+    <section class="wf" id="s13">
+        <span class="tag">13 FOOTER</span>
+        <div class="ftr ftr-wrap">
+            <div class="logo"><div class="ph icon"><span>logo</span></div>ステラクリエイト</div>
+            <nav><span>Figma Community</span><span>お問い合わせ</span><span>プライバシーポリシー</span></nav>
+            <div class="copy">© 2026 ステラクリエイト</div>
+        </div>
+    </section>
+    <aside class="note">
+        <h3><b>13</b>フッター</h3>
+        <dl>
+            <dt>要素</dt>
+            <dd>運営者ロゴ、Figma Community・お問い合わせ・プライバシーポリシーへのリンク、コピーライト。</dd>
+        </dl>
+        <p class="todo">運営者の表記、問い合わせ先・プライバシーポリシーのリンク先（コーポレートサイトの既存ページを使うか）</p>
+    </aside>
+
+</div>
+</div>
+
+<script src="wireframe.js"></script>
+</body>
+</html>

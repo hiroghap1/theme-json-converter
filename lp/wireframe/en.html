@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LP ワイヤーフレーム（英語版）｜WP theme-json Converter</title>
+<link rel="stylesheet" href="wireframe.css">
+</head>
+<body>
+
+<div class="toolbar" role="toolbar" aria-label="ワイヤー表示切替" lang="ja">
+    <strong>LP ワイヤーフレーム（英語版）</strong>
+    <span class="meta">WP theme-json Converter ／ v0.2 ／ 2026-10-13</span>
+    <span class="spacer"></span>
+    <div class="seg" aria-label="言語">
+        <a href="index.html" data-lang-link>日本語</a>
+        <a href="en.html" data-lang-link aria-current="page">English</a>
+    </div>
+    <div class="seg" aria-label="表示幅">
+        <button type="button" data-view="pc" aria-pressed="true">PC 1200</button>
+        <button type="button" data-view="sp" aria-pressed="false">SP 375</button>
+    </div>
+    <button type="button" id="toggle-notes" aria-pressed="true">注釈を表示</button>
+</div>
+
+<div class="board">
+<div class="page">
+
+    <!-- ========== Cover（ワイヤーの前提） ========== -->
+    <div class="cover" lang="ja">
+        <div>
+            <h1>WP theme-json Converter ― LP 構成案（英語版）</h1>
+            <p>構成・仕様は日本語版と同じです。付箋には英語版で異なる点だけを書いています。コピーはすべて仮。</p>
+            <dl>
+                <dt>公開URL</dt><dd>stella-create.co.jp/tools/wp-theme-json-converter/en/（スラッグは仮）</dd>
+                <dt>主CTA</dt><dd>“Get it free on Figma Community”（ヘッダー／FV／最終CTA）</dd>
+                <dt>ターゲット</dt><dd>海外の WordPress ブロックテーマ制作者・デザイナー</dd>
+                <dt>コピー方針</dt><dd>日本語版の直訳ではなく、Figma Community の英語説明文とトーン・用語をそろえる</dd>
+            </dl>
+            <div class="legend">
+                <span><i class="ph-i"></i>画像・動画の仮置き</span>
+                <span><i class="tag-i"></i>セクション番号</span>
+                <span><i class="note-i"></i>注釈（英語版で異なる点）</span>
+            </div>
+        </div>
+        <ol>
+            <li><a href="#s01"><b>01</b>Header</a></li>
+            <li><a href="#s02"><b>02</b>Hero</a></li>
+            <li><a href="#s03"><b>03</b>Problem</a></li>
+            <li><a href="#s04"><b>04</b>Three modes</a></li>
+            <li><a href="#s05"><b>05</b>Feature detail</a></li>
+            <li><a href="#s06"><b>06</b>Mapping</a></li>
+            <li><a href="#s07"><b>07</b>Compatibility</a></li>
+            <li><a href="#s08"><b>08</b>How to use</a></li>
+            <li><a href="#s09"><b>09</b>Who it's for</a></li>
+            <li><a href="#s10"><b>10</b>FAQ</a></li>
+            <li><a href="#s11"><b>11</b>Changelog</a></li>
+            <li><a href="#s12"><b>12</b>Final CTA</a></li>
+            <li><a href="#s13"><b>13</b>Footer</a></li>
+        </ol>
+    </div>
+
+    <!-- ========== 01 Header ========== -->
+    <section class="wf" id="s01">
+        <span class="tag">01 HEADER</span>
+        <div class="hdr">
+            <div class="logo"><div class="ph icon"><span>icon</span></div>WP theme-json Converter</div>
+            <nav><span>Features</span><span>Mapping</span><span>Compatibility</span><span>How to use</span><span>FAQ</span></nav>
+            <span class="lang">日本語</span>
+            <a class="btn primary sm">Get it on Figma</a>
+            <span class="burger" aria-hidden="true"></span>
+        </div>
+    </section>
+    <div class="note-group" lang="ja">
+    <aside class="note">
+        <h3><b>01</b>ヘッダー</h3>
+        <dl>
+            <dt>言語切替</dt>
+            <dd>「日本語」で日本語版へ。<code>hreflang</code>（ja / en / x-default）を相互に指定。</dd>
+            <dt>ナビ</dt>
+            <dd>英語は項目名が長くなるので、PC で1行に収まるか要チェック。</dd>
+        </dl>
+    </aside>
+    <aside class="note">
+        <h3><b>02</b>ファーストビュー</h3>
+        <dl>
+            <dt>コピー</dt>
+            <dd>日本語版の「双方向に」を軸にした意訳。PC で2行に収まる長さを目安に。</dd>
+            <dt>料金</dt>
+            <dd>英語圏では CTA に “free” を入れるのが一般的なので、ボタン文言に含める。</dd>
+        </dl>
+    </aside>
+    </div>
+
+    <!-- ========== 02 Hero ========== -->
+    <section class="wf" id="s02">
+        <span class="tag">02 HERO</span>
+        <div class="inner hero">
+            <div>
+                <span class="chip">Figma plugin ｜ Supports WordPress 7.1</span>
+                <h1>theme.json ⇄ Figma,<br>in both directions.</h1>
+                <p>Turn the design tokens in your WordPress block theme into Figma variables — and turn your Figma design system back into theme.json. Import, export, and generate, so design and code never drift apart.</p>
+                <div class="ctas">
+                    <a class="btn primary">Get it free on Figma Community</a>
+                    <a class="btn">How it works ↓</a>
+                </div>
+                <div class="micro">Free ｜ Works in Figma design files</div>
+                <div class="chips">
+                    <span class="chip">theme.json version 1–3</span>
+                    <span class="chip">WordPress 5.8–7.1</span>
+                    <span class="chip">Dark mode → style variations</span>
+                </div>
+            </div>
+            <div class="flow" aria-label="Diagram of two-way conversion between theme.json and Figma">
+                <div class="box">
+                    <div class="box-h">theme.json</div>
+<pre>{
+  "version": 3,
+  "settings": {
+    "color": {
+      "palette": […]
+    },
+    "spacing": {
+      "spacingSizes": […]
+    },
+    "typography": {
+      "fontSizes": […]
+    }
+  }
+}</pre>
+                </div>
+                <div class="swap">
+                    <span>Import</span>
+                    <span class="arrow">⇄</span>
+                    <span>Export</span>
+                </div>
+                <div class="box">
+                    <div class="box-h">Figma Variables</div>
+                    <ul class="vars">
+                        <li class="grp">Theme Colors</li>
+                        <li><i></i>Base</li>
+                        <li><i></i>Contrast</li>
+                        <li><i></i>Accent 1</li>
+                        <li class="grp">Theme Spacing</li>
+                        <li><i></i>20 ｜ 8px</li>
+                        <li><i></i>30 ｜ 12px</li>
+                        <li class="grp">Typography/</li>
+                        <li><i></i>medium ｜ 20px</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== 03 Problem ========== -->
+    <section class="wf alt" id="s03">
+        <span class="tag">03 PROBLEM</span>
+        <div class="inner problem">
+            <span class="eyebrow">PROBLEM</span>
+            <h2 class="sec">Are your design tokens drifting<br>between design and code?</h2>
+            <p class="lead">The manual back-and-forth of building block themes.</p>
+            <div class="cols-3">
+                <div class="card">
+                    <div class="ph round"><span>Illustration</span></div>
+                    <h3>Copying colors and spacing from Figma into theme.json by hand</h3>
+                    <p>Typos in slugs and values slip in easily.</p>
+                </div>
+                <div class="card">
+                    <div class="ph round"><span>Illustration</span></div>
+                    <h3>Rebuilding an existing theme.json in Figma</h3>
+                    <p>Recreating palettes and font sizes one by one.</p>
+                </div>
+                <div class="card">
+                    <div class="ph round"><span>Illustration</span></div>
+                    <h3>Keeping up with what each WordPress release adds</h3>
+                    <p>Border radius, dimensions, viewport — new settings keep coming.</p>
+                </div>
+            </div>
+            <p class="bridge">Automate the round trip with one plugin.</p>
+        </div>
+    </section>
+
+    <!-- ========== 04 Modes ========== -->
+    <section class="wf" id="s04">
+        <span class="tag">04 SOLUTION</span>
+        <div class="inner">
+            <span class="eyebrow">FEATURES</span>
+            <h2 class="sec">Three modes, one round trip</h2>
+            <p class="lead">Open the plugin and pick a tab — read, write, or start from scratch.</p>
+            <div class="cols-3">
+                <div class="card mode">
+                    <div class="mode-head"><span class="num">01</span><div class="ph icon"><span>icon</span></div></div>
+                    <div class="dir">theme.json → Figma</div>
+                    <h3>Import</h3>
+                    <p>Drop in a theme.json. Colors, spacing, fonts and more become variables; font sizes become text styles.</p>
+                    <span class="more">Learn more ↓</span>
+                </div>
+                <div class="card mode">
+                    <div class="mode-head"><span class="num">02</span><div class="ph icon"><span>icon</span></div></div>
+                    <div class="dir">Figma → theme.json</div>
+                    <h3>Export</h3>
+                    <p>Write a theme.json from your Figma variables and styles. Choose whether to include each setting, and its value.</p>
+                    <span class="more">Learn more ↓</span>
+                </div>
+                <div class="card mode">
+                    <div class="mode-head"><span class="num">03</span><div class="ph icon"><span>icon</span></div></div>
+                    <div class="dir">Scratch → Figma</div>
+                    <h3>Generate</h3>
+                    <p>Pick a WordPress version to create a starter set of variables and text styles.</p>
+                    <span class="more">Learn more ↓</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== 05 Feature detail ========== -->
+    <section class="wf alt" id="s05">
+        <span class="tag">05 DETAIL</span>
+        <div class="inner">
+            <div class="feature">
+                <div>
+                    <span class="label">01 IMPORT</span>
+                    <h3>Load a theme.json,<br>get your tokens in Figma</h3>
+                    <p>Create variables and text styles automatically from an existing theme's theme.json.</p>
+                    <ul class="checks">
+                        <li>Drag and drop to import</li>
+                        <li>Colors, duotone, spacing, dimensions, layout widths, font families, border radius and viewport become variables</li>
+                        <li>Fluid font sizes get Desktop / Mobile modes<small>Bound to each text style's font size</small></li>
+                        <li>Variables with the same name are updated; others are created</li>
+                        <li>Slugs (e.g. <code>spacing--20</code>) are preserved</li>
+                    </ul>
+                </div>
+                <div class="media">
+                    <div class="ph shot"><span>Screenshot<br>Import tab + generated Variables panel</span></div>
+                </div>
+            </div>
+
+            <div class="feature rev">
+                <div>
+                    <span class="label">02 EXPORT</span>
+                    <h3>Ship your Figma design system<br>as theme.json</h3>
+                    <p>Pick the settings you need and export — ready to drop into your block theme.</p>
+                    <ul class="checks">
+                        <li>Include or exclude each setting — appearanceTools, defaultPalette, textIndent, viewport and more — and set its value</li>
+                        <li>Extra modes of Theme Colors (e.g. Dark) are exported as style variations, <code>styles/*.json</code>, in a zip</li>
+                        <li>Original slugs are restored on export</li>
+                        <li><code>$schema</code> matches your target WordPress version</li>
+                    </ul>
+                </div>
+                <div class="media">
+                    <div class="ph shot"><span>Screenshot<br>Export tab (options)</span></div>
+                    <div class="sub">
+                        <div class="tree mono">theme-json.zip
+├ theme.json
+└ styles/
+   └ Dark.json</div>
+                        <div class="ph"><span>Exported JSON excerpt</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature">
+                <div>
+                    <span class="label">03 GENERATE</span>
+                    <h3>Pick a version,<br>get a starter set</h3>
+                    <p>A foundation for new themes, with exactly the settings your WordPress version supports.</p>
+                    <ul class="checks">
+                        <li>Color palette, duotone, font sizes, font families, spacing and layout widths</li>
+                        <li>Fluid font sizes (Desktop / Mobile) with version 3</li>
+                        <li>Border radius on WordPress 6.9+, dimensions on 7.0+, viewport on 7.1+</li>
+                    </ul>
+                </div>
+                <div class="media">
+                    <div class="ph shot"><span>Screenshot<br>Generate tab (version + what gets created)</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <aside class="note" lang="ja">
+        <h3><b>05</b>機能詳細</h3>
+        <dl>
+            <dt>スクリーンショット</dt>
+            <dd>プラグイン UI を英語化して撮る（v1.5.0 で英語化）。ヘッダーで English に切り替えて撮影し、本文の Import / Export / Generate と表記をそろえる。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 06 Mapping table ========== -->
+    <section class="wf" id="s06">
+        <span class="tag">06 MAPPING</span>
+        <div class="inner">
+            <span class="eyebrow">MAPPING</span>
+            <h2 class="sec">How theme.json maps to Figma</h2>
+            <p class="lead">See where each setting lives in Figma.</p>
+            <p class="scroll-hint">← Scroll sideways →</p>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>theme.json</th><th>Figma</th><th>Type</th><th>Available in</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>settings.color.palette</code></td><td>Theme Colors</td><td>Color variable</td><td>All</td></tr>
+                        <tr><td><code>settings.color.duotone</code></td><td>Theme Duotone<br><small>&lt;name&gt;/shadow · /highlight</small></td><td>Color variable (can reference the palette)</td><td>All</td></tr>
+                        <tr><td><code>settings.typography.fontSizes</code></td><td>Under Typography/</td><td>Text style</td><td>All</td></tr>
+                        <tr><td><code>fontSizes[].fluid</code></td><td>Theme Font Sizes<br><small>Desktop / Mobile modes</small></td><td>Number variable</td><td>Version 3+</td></tr>
+                        <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>String variable</td><td>All</td></tr>
+                        <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>Number variable</td><td>Version 2+</td></tr>
+                        <tr><td><code>settings.layout.contentSize</code> / <code>wideSize</code></td><td>Theme Layout</td><td>Number variable</td><td>All</td></tr>
+                        <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>Number variable</td><td>WordPress 6.9+</td></tr>
+                        <tr><td><code>settings.dimensions.dimensionSizes</code></td><td>Theme Dimensions</td><td>Number variable</td><td>WordPress 7.0+</td></tr>
+                        <tr><td><code>settings.viewport</code></td><td>Theme Viewport<br><small>mobile / tablet</small></td><td>Number variable</td><td>WordPress 7.1+</td></tr>
+                        <tr><td><code>styles/&lt;mode&gt;.json</code></td><td>2nd+ modes of Theme Colors</td><td>Style variation</td><td>Export only</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="table-note">* “Available in” refers to the preset you choose for export and generate. Import reads whatever your theme.json contains, regardless of version.</p>
+        </div>
+    </section>
+
+    <!-- ========== 07 Versions ========== -->
+    <section class="wf alt" id="s07">
+        <span class="tag">07 VERSIONS</span>
+        <div class="inner">
+            <span class="eyebrow">COMPATIBILITY</span>
+            <h2 class="sec">From WordPress 5.8 to 7.1</h2>
+            <p class="lead">Supports theme.json versions 1–3. Export and generate only use the settings available in the version you choose.</p>
+            <ol class="timeline">
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 1</div>
+                    <div class="wp">WordPress 5.8+</div>
+                    <div class="adds">Basic colors and font sizes</div>
+                </li>
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 2</div>
+                    <div class="wp">WordPress 5.9+</div>
+                    <div class="adds">+ Spacing</div>
+                </li>
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 6.6+</div>
+                    <div class="adds">+ Accent colors, fluid font sizes</div>
+                </li>
+                <li>
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 7.0+</div>
+                    <div class="adds">+ Border radius, dimensions, textIndent</div>
+                </li>
+                <li class="now">
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 7.1+</div>
+                    <div class="adds">+ Viewport and more</div>
+                    <span class="chip">Latest · default</span>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- ========== 08 How to ========== -->
+    <section class="wf" id="s08">
+        <span class="tag">08 HOW TO</span>
+        <div class="inner">
+            <span class="eyebrow">HOW TO USE</span>
+            <h2 class="sec">Get started in 3 steps</h2>
+            <p class="lead">From install to export in minutes.</p>
+            <div class="cols-3 steps">
+                <div class="step">
+                    <div class="ph"><span>Plugin page on<br>Figma Community</span></div>
+                    <span class="no">STEP 1</span>
+                    <h3>Add the plugin</h3>
+                    <p>Add “WP theme-json Converter” from Figma Community.</p>
+                </div>
+                <div class="step">
+                    <div class="ph"><span>Plugin UI<br>three tabs</span></div>
+                    <span class="no">STEP 2</span>
+                    <h3>Pick a mode</h3>
+                    <p>Run the plugin in a design file and choose Import, Export, or Generate.</p>
+                </div>
+                <div class="step">
+                    <div class="ph"><span>Status message or<br>download</span></div>
+                    <span class="no">STEP 3</span>
+                    <h3>Import or export</h3>
+                    <p>Load a theme.json, or choose your settings and export. Results appear in the status bar.</p>
+                </div>
+            </div>
+            <div class="ph video"><span>▶ Demo video (60–90s)<br>Import → edit → export</span></div>
+        </div>
+    </section>
+    <aside class="note" lang="ja">
+        <h3><b>08</b>使い方</h3>
+        <dl>
+            <dt>UI 表記とのずれ</dt>
+            <dd>本文は Import / Export / Generate だが、STEP 2 の画像に写るタブ名は「インポート／エクスポート／生成」。05 の画像方針とあわせて決める。</dd>
+            <dt>デモ動画</dt>
+            <dd>作る場合は英語字幕を付けるか、英語版を別撮り。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 09 Use cases ========== -->
+    <section class="wf alt" id="s09">
+        <span class="tag">09 USE CASES</span>
+        <div class="inner">
+            <span class="eyebrow">USE CASES</span>
+            <h2 class="sec solo">Who it's for</h2>
+            <div class="cols-3">
+                <div class="card persona">
+                    <div class="ph round"><span>Person</span></div>
+                    <div>
+                        <h3>Designers building block themes in Figma</h3>
+                        <p>Design with accurate tokens that match what WordPress actually uses.</p>
+                    </div>
+                </div>
+                <div class="card persona">
+                    <div class="ph round"><span>Person</span></div>
+                    <div>
+                        <h3>Teams syncing a design system with WordPress</h3>
+                        <p>Push Figma changes to theme.json and keep both sides aligned.</p>
+                    </div>
+                </div>
+                <div class="card persona">
+                    <div class="ph round"><span>Person</span></div>
+                    <div>
+                        <h3>Developers starting a new theme fast</h3>
+                        <p>Start designing right away from standard WordPress presets.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== 10 FAQ ========== -->
+    <section class="wf" id="s10">
+        <span class="tag">10 FAQ</span>
+        <div class="inner">
+            <span class="eyebrow">FAQ</span>
+            <h2 class="sec solo">Frequently asked questions</h2>
+            <div class="faq">
+                <details open>
+                    <summary>Is it free?</summary>
+                    <div class="a">Yes. The plugin is free to use.</div>
+                </details>
+                <details open>
+                    <summary>Will it overwrite my existing variables?</summary>
+                    <div class="a">If a collection and variable with the same name already exist, their values are updated. Otherwise, new ones are created.</div>
+                </details>
+                <details>
+                    <summary>Does it support dark mode?</summary>
+                    <div class="a">Extra modes in the Theme Colors collection (e.g. Dark) are exported as style variations, <code>styles/&lt;mode&gt;.json</code>, zipped together with theme.json.</div>
+                </details>
+                <details>
+                    <summary>Which WordPress versions are supported?</summary>
+                    <div class="a">theme.json versions 1–3 (WordPress 5.8–7.1).</div>
+                </details>
+                <details>
+                    <summary>Can it import font sizes set in vw or em?</summary>
+                    <div class="a">Font sizes in px and rem are supported. Anything that can't be imported is listed in the notification when the import finishes.</div>
+                </details>
+                <details>
+                    <summary>Does it work in FigJam or Dev Mode?</summary>
+                    <div class="a">It works in Figma design files. FigJam and Dev Mode are not supported.</div>
+                </details>
+                <details>
+                    <summary>Is the plugin available in English?</summary>
+                    <div class="a">Yes. The plugin UI is available in English and Japanese. Switch it from the header, and your choice is remembered.</div>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== 11 Changelog ========== -->
+    <section class="wf alt" id="s11">
+        <span class="tag">11 CHANGELOG</span>
+        <div class="inner">
+            <span class="eyebrow">CHANGELOG</span>
+            <h2 class="sec solo">Changelog</h2>
+            <div class="log">
+                <div class="log-item">
+                    <div class="ver">v1.5.0<span class="date">2026-10-14</span></div>
+                    <ul><li>English language support for the plugin UI and notifications (switch in the header)</li></ul>
+                </div>
+                <div class="log-item">
+                    <div class="ver">v1.4.0<span class="date">2026-09-30</span></div>
+                    <ul>
+                        <li>Two-way conversion for layout widths, font families, border radius, viewport, duotone and fluid font sizes</li>
+                        <li>Export style variations (styles/*.json) as a zip</li>
+                        <li>Slug preservation, drag-and-drop import, and more</li>
+                    </ul>
+                </div>
+                <div class="log-item">
+                    <div class="ver">v1.3.0<span class="date">2026-09-26</span></div>
+                    <ul><li>Support for WordPress 7.1</li></ul>
+                </div>
+            </div>
+            <div class="center"><a class="btn sm">Full changelog</a></div>
+        </div>
+    </section>
+    <aside class="note" lang="ja">
+        <h3><b>11</b>更新履歴</h3>
+        <dl>
+            <dt>出典</dt>
+            <dd>Figma Community 説明文（<code>figma-community-description.md</code>）の英語の Changelog から直近3件。README の Changelog は日本語。</dd>
+        </dl>
+    </aside>
+
+    <!-- ========== 12 Final CTA ========== -->
+    <section class="wf dark" id="s12">
+        <span class="tag">12 CTA</span>
+        <div class="inner final">
+            <h2>Spend less time on the round trip.</h2>
+            <p>Cut the manual work between theme.json and Figma, starting today.</p>
+            <a class="btn primary">Get it free on Figma Community</a>
+        </div>
+    </section>
+
+    <!-- ========== 13 Footer ========== -->
+    <section class="wf" id="s13">
+        <span class="tag">13 FOOTER</span>
+        <div class="ftr ftr-wrap">
+            <div class="logo"><div class="ph icon"><span>logo</span></div>Stella Create</div>
+            <nav><span>Figma Community</span><span>Contact</span><span>Privacy Policy</span></nav>
+            <div class="copy">© 2026 Stella Create</div>
+        </div>
+    </section>
+    <aside class="note" lang="ja">
+        <h3><b>13</b>フッター</h3>
+        <dl>
+            <dt>運営者表記</dt>
+            <dd>英字表記はドメイン（stella-create.co.jp）から「Stella Create」と仮置き。</dd>
+        </dl>
+        <p class="todo">英字の正式表記。問い合わせ・プライバシーポリシーの英語ページがあるか（なければ日本語ページへリンクするか）</p>
+    </aside>
+
+</div>
+</div>
+
+<script src="wireframe.js"></script>
+</body>
+</html>
