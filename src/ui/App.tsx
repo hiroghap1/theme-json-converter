@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ThemeJson } from '../common/types';
+import { detectLang, isLang, Lang, LANGS, MESSAGES } from '../common/i18n';
 import { createZip } from './zip';
 
 // SVG Icons
@@ -111,6 +112,11 @@ const wpAtLeast = (wpVersion: string, minVersion: string): boolean => {
 };
 
 const App: React.FC = () => {
+    // Until the saved choice arrives from the plugin code, follow the browser / app language
+    const [lang, setLang] = useState<Lang>(() => detectLang(navigator.language));
+    const t = MESSAGES[lang];
+    // For the message handler, which is registered once
+    const langRef = useRef(lang);
     const [activeTab, setActiveTab] = useState<TabType>('import');
     const [generatePresetKey, setGeneratePresetKey] = useState<string>(DEFAULT_PRESET_KEY);
     const [status, setStatus] = useState<string>('');
@@ -151,11 +157,11 @@ const App: React.FC = () => {
         reader.onload = (e) => {
             try {
                 const json = JSON.parse(e.target?.result as string) as ThemeJson;
-                parent.postMessage({ pluginMessage: { type: 'import-theme-json', payload: json } }, '*');
-                setStatus('インポートを実行中...');
+                parent.postMessage({ pluginMessage: { type: 'import-theme-json', payload: json, lang } }, '*');
+                setStatus(t.importing);
             } catch (error) {
                 console.error('Invalid JSON', error);
-                setStatus('エラー: 無効なJSONファイルです');
+                setStatus(t.invalidJson);
             }
         };
         reader.readAsText(file);
@@ -186,7 +192,7 @@ const App: React.FC = () => {
         const file = event.dataTransfer.files?.[0];
         if (!file) return;
         if (!file.name.toLowerCase().endsWith('.json')) {
-            setStatus('エラー: .json ファイルをドロップしてください');
+            setStatus(t.dropJsonOnly);
             return;
         }
         importFile(file);
@@ -214,9 +220,10 @@ const App: React.FC = () => {
                 a.download = variations.length > 0 ? 'theme-json.zip' : 'theme.json';
                 a.click();
                 URL.revokeObjectURL(url);
-                setStatus(variations.length > 0
-                    ? `エクスポート完了！（theme.json + スタイルバリエーション ${variations.length}件）`
-                    : 'エクスポート完了！');
+                setStatus(MESSAGES[langRef.current].exportDone(variations.length));
+            } else if (type === 'language') {
+                // Language saved by the user (null = not chosen yet, keep the detected one)
+                if (isLang(payload)) setLang(payload);
             } else if (type === 'status') {
                 setStatus(payload as string);
             } else if (type === 'viewport-variables') {
@@ -235,7 +242,19 @@ const App: React.FC = () => {
                 });
             }
         };
+        parent.postMessage({ pluginMessage: { type: 'get-language' } }, '*');
     }, []);
+
+    React.useEffect(() => {
+        langRef.current = lang;
+        document.documentElement.lang = lang;
+    }, [lang]);
+
+    const handleLangChange = (next: Lang) => {
+        setLang(next);
+        setStatus('');
+        parent.postMessage({ pluginMessage: { type: 'save-language', payload: next } }, '*');
+    };
 
     // Clear the status bar when switching tabs, and refresh the viewport variable list on the export tab
     React.useEffect(() => {
@@ -251,9 +270,10 @@ const App: React.FC = () => {
             pluginMessage: {
                 type: 'export-theme-json',
                 payload: { ...exportOptions, schemaVersion, wpVersion },
+                lang,
             },
         }, '*');
-        setStatus('エクスポート中...');
+        setStatus(t.exporting);
     };
 
     const handleExportPresetChange = (key: string) => {
@@ -297,23 +317,43 @@ const App: React.FC = () => {
             pluginMessage: {
                 type: 'generate-theme-json',
                 payload: { schemaVersion, wpVersion },
+                lang,
             },
         }, '*');
-        setStatus(`${label} でスタイルを生成中...`);
+        setStatus(t.generating(label));
     };
 
     const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-        { id: 'import', label: 'インポート', icon: <ImportIcon size={16} /> },
-        { id: 'export', label: 'エクスポート', icon: <ExportIcon size={16} /> },
-        { id: 'generate', label: '生成', icon: <GenerateIcon size={16} /> },
+        { id: 'import', label: t.tabImport, icon: <ImportIcon size={16} /> },
+        { id: 'export', label: t.tabExport, icon: <ExportIcon size={16} /> },
+        { id: 'generate', label: t.tabGenerate, icon: <GenerateIcon size={16} /> },
     ];
 
     return (
         <div style={styles.container}>
             {/* Header */}
             <div style={styles.header}>
-                <h1 style={styles.title}>WP theme-json</h1>
-                <span style={styles.subtitle}>WordPress theme.json Converter</span>
+                <div>
+                    <h1 style={styles.title}>WP theme-json</h1>
+                    <span style={styles.subtitle}>WordPress theme.json Converter</span>
+                </div>
+                <div style={styles.langSwitch} role="group" aria-label={t.languageLabel}>
+                    {LANGS.map((l) => (
+                        <button
+                            key={l.id}
+                            type="button"
+                            lang={l.id}
+                            aria-pressed={lang === l.id}
+                            onClick={() => handleLangChange(l.id)}
+                            style={{
+                                ...styles.langButton,
+                                ...(lang === l.id ? styles.langButtonActive : {}),
+                            }}
+                        >
+                            {l.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Tabs */}
@@ -337,9 +377,9 @@ const App: React.FC = () => {
             <div style={styles.content}>
                 {activeTab === 'import' && (
                     <div style={styles.section}>
-                        <h2 style={styles.sectionTitle}>theme.json をインポート</h2>
+                        <h2 style={styles.sectionTitle}>{t.importTitle}</h2>
                         <p style={styles.description}>
-                            theme.jsonファイルをアップロードして、Figmaのバリアブルとスタイルを作成します。
+                            {t.importDescription}
                         </p>
                         <div
                             style={{ ...styles.uploadArea, ...(isDragging ? styles.uploadAreaActive : {}) }}
@@ -349,8 +389,8 @@ const App: React.FC = () => {
                             onDrop={handleDrop}
                         >
                             <FolderIcon color="#0073aa" size={40} />
-                            <span style={styles.uploadText}>クリックしてファイルを選択</span>
-                            <span style={styles.uploadHint}>または、ここにドロップ</span>
+                            <span style={styles.uploadText}>{t.uploadText}</span>
+                            <span style={styles.uploadHint}>{t.uploadHint}</span>
                         </div>
                         <input
                             type="file"
@@ -364,13 +404,13 @@ const App: React.FC = () => {
 
                 {activeTab === 'export' && (
                     <div style={styles.section}>
-                        <h2 style={styles.sectionTitle}>theme.json をエクスポート</h2>
+                        <h2 style={styles.sectionTitle}>{t.exportTitle}</h2>
                         <p style={styles.description}>
-                            Figmaの現在のバリアブルとスタイルからtheme.jsonを生成してダウンロードします。
+                            {t.exportDescription}
                         </p>
                         
                         <div style={styles.versionSelector}>
-                            <label style={styles.label}>theme.jsonバージョン:</label>
+                            <label style={styles.label}>{t.versionLabel}</label>
                             <select
                                 value={exportOptions.presetKey}
                                 onChange={(e) => handleExportPresetChange(e.target.value)}
@@ -383,7 +423,7 @@ const App: React.FC = () => {
                         </div>
 
                         <div style={styles.optionsSection}>
-                            <p style={styles.optionsSectionTitle}>設定オプション:</p>
+                            <p style={styles.optionsSectionTitle}>{t.optionsTitle}</p>
                             
                             <div style={styles.optionRow}>
                                 <label style={styles.checkboxLabel}>
@@ -393,7 +433,7 @@ const App: React.FC = () => {
                                         onChange={(e) => handleOptionSettingChange('appearanceTools', 'include', e.target.checked)}
                                         style={styles.checkbox}
                                     />
-                                    appearanceTools を出力
+                                    {t.includeOption('appearanceTools')}
                                 </label>
                                 {exportOptions.appearanceTools.include && (
                                     <div style={styles.valueSelector}>
@@ -421,7 +461,7 @@ const App: React.FC = () => {
                                 )}
                             </div>
 
-                            <p style={styles.optionGroupTitle}>Color設定:</p>
+                            <p style={styles.optionGroupTitle}>{t.groupColor}</p>
                             
                             <div style={styles.optionRow}>
                                 <label style={styles.checkboxLabel}>
@@ -431,7 +471,7 @@ const App: React.FC = () => {
                                         onChange={(e) => handleOptionSettingChange('defaultPalette', 'include', e.target.checked)}
                                         style={styles.checkbox}
                                     />
-                                    defaultPalette を出力
+                                    {t.includeOption('defaultPalette')}
                                 </label>
                                 {exportOptions.defaultPalette.include && (
                                     <div style={styles.valueSelector}>
@@ -467,7 +507,7 @@ const App: React.FC = () => {
                                         onChange={(e) => handleOptionSettingChange('defaultGradients', 'include', e.target.checked)}
                                         style={styles.checkbox}
                                     />
-                                    defaultGradients を出力
+                                    {t.includeOption('defaultGradients')}
                                 </label>
                                 {exportOptions.defaultGradients.include && (
                                     <div style={styles.valueSelector}>
@@ -503,7 +543,7 @@ const App: React.FC = () => {
                                         onChange={(e) => handleOptionSettingChange('defaultDuotone', 'include', e.target.checked)}
                                         style={styles.checkbox}
                                     />
-                                    defaultDuotone を出力
+                                    {t.includeOption('defaultDuotone')}
                                 </label>
                                 {exportOptions.defaultDuotone.include && (
                                     <div style={styles.valueSelector}>
@@ -531,7 +571,7 @@ const App: React.FC = () => {
                                 )}
                             </div>
 
-                            <p style={styles.optionGroupTitle}>Typography設定:</p>
+                            <p style={styles.optionGroupTitle}>{t.groupTypography}</p>
                             
                             <div style={styles.optionRow}>
                                 <label style={styles.checkboxLabel}>
@@ -541,7 +581,7 @@ const App: React.FC = () => {
                                         onChange={(e) => handleOptionSettingChange('defaultFontSizes', 'include', e.target.checked)}
                                         style={styles.checkbox}
                                     />
-                                    defaultFontSizes を出力
+                                    {t.includeOption('defaultFontSizes')}
                                 </label>
                                 {exportOptions.defaultFontSizes.include && (
                                     <div style={styles.valueSelector}>
@@ -571,7 +611,7 @@ const App: React.FC = () => {
 
                             {exportPreset.schemaVersion >= 2 && (
                                 <>
-                                    <p style={styles.optionGroupTitle}>Spacing設定:</p>
+                                    <p style={styles.optionGroupTitle}>{t.groupSpacing}</p>
                                     <div style={styles.optionRow}>
                                         <label style={styles.checkboxLabel}>
                                             <input
@@ -580,7 +620,7 @@ const App: React.FC = () => {
                                                 onChange={(e) => handleOptionSettingChange('defaultSpacingSizes', 'include', e.target.checked)}
                                                 style={styles.checkbox}
                                             />
-                                            defaultSpacingSizes を出力
+                                            {t.includeOption('defaultSpacingSizes')}
                                         </label>
                                         {exportOptions.defaultSpacingSizes.include && (
                                             <div style={styles.valueSelector}>
@@ -612,7 +652,7 @@ const App: React.FC = () => {
 
                             {wpAtLeast(exportPreset.wpVersion, '7.0') && (
                                 <>
-                                    <p style={styles.optionGroupTitle}>Typography 追加設定 (WordPress 7.0+):</p>
+                                    <p style={styles.optionGroupTitle}>{t.groupTypographyExtra}</p>
                                     <div style={styles.optionRow}>
                                         <label style={styles.checkboxLabel}>
                                             <input
@@ -621,7 +661,7 @@ const App: React.FC = () => {
                                                 onChange={(e) => handleTextIndentChange('include', e.target.checked)}
                                                 style={styles.checkbox}
                                             />
-                                            textIndent を出力
+                                            {t.includeOption('textIndent')}
                                         </label>
                                         {exportOptions.textIndent.include && (
                                             <div style={styles.valueSelector}>
@@ -649,7 +689,7 @@ const App: React.FC = () => {
                                         )}
                                     </div>
 
-                                    <p style={styles.optionGroupTitle}>Dimensions設定 (WordPress 7.0+):</p>
+                                    <p style={styles.optionGroupTitle}>{t.groupDimensions}</p>
                                     <div style={styles.optionRow}>
                                         <label style={styles.checkboxLabel}>
                                             <input
@@ -658,7 +698,7 @@ const App: React.FC = () => {
                                                 onChange={(e) => handleOptionSettingChange('width', 'include', e.target.checked)}
                                                 style={styles.checkbox}
                                             />
-                                            width を出力
+                                            {t.includeOption('width')}
                                         </label>
                                         {exportOptions.width.include && (
                                             <div style={styles.valueSelector}>
@@ -694,7 +734,7 @@ const App: React.FC = () => {
                                                 onChange={(e) => handleOptionSettingChange('height', 'include', e.target.checked)}
                                                 style={styles.checkbox}
                                             />
-                                            height を出力
+                                            {t.includeOption('height')}
                                         </label>
                                         {exportOptions.height.include && (
                                             <div style={styles.valueSelector}>
@@ -731,7 +771,7 @@ const App: React.FC = () => {
                                                     onChange={(e) => handleOptionSettingChange('minWidth', 'include', e.target.checked)}
                                                     style={styles.checkbox}
                                                 />
-                                                minWidth を出力
+                                                {t.includeOption('minWidth')}
                                             </label>
                                             {exportOptions.minWidth.include && (
                                                 <div style={styles.valueSelector}>
@@ -764,7 +804,7 @@ const App: React.FC = () => {
 
                             {wpAtLeast(exportPreset.wpVersion, '7.1') && (
                                 <>
-                                    <p style={styles.optionGroupTitle}>Background設定 (WordPress 7.1+):</p>
+                                    <p style={styles.optionGroupTitle}>{t.groupBackground}</p>
                                     <div style={styles.optionRow}>
                                         <label style={styles.checkboxLabel}>
                                             <input
@@ -773,7 +813,7 @@ const App: React.FC = () => {
                                                 onChange={(e) => handleOptionSettingChange('backgroundGradient', 'include', e.target.checked)}
                                                 style={styles.checkbox}
                                             />
-                                            background.gradient を出力
+                                            {t.includeOption('background.gradient')}
                                         </label>
                                         {exportOptions.backgroundGradient.include && (
                                             <div style={styles.valueSelector}>
@@ -801,7 +841,7 @@ const App: React.FC = () => {
                                         )}
                                     </div>
 
-                                    <p style={styles.optionGroupTitle}>Block Visibility設定 (WordPress 7.1+):</p>
+                                    <p style={styles.optionGroupTitle}>{t.groupBlockVisibility}</p>
                                     <div style={styles.optionRow}>
                                         <label style={styles.checkboxLabel}>
                                             <input
@@ -810,7 +850,7 @@ const App: React.FC = () => {
                                                 onChange={(e) => handleOptionSettingChange('blockVisibilityAllowEditing', 'include', e.target.checked)}
                                                 style={styles.checkbox}
                                             />
-                                            blockVisibility.allowEditing を出力
+                                            {t.includeOption('blockVisibility.allowEditing')}
                                         </label>
                                         {exportOptions.blockVisibilityAllowEditing.include && (
                                             <div style={styles.valueSelector}>
@@ -838,7 +878,7 @@ const App: React.FC = () => {
                                         )}
                                     </div>
 
-                                    <p style={styles.optionGroupTitle}>Viewport設定 (WordPress 7.1+):</p>
+                                    <p style={styles.optionGroupTitle}>{t.groupViewport}</p>
                                     <div style={styles.optionRow}>
                                         <label style={styles.checkboxLabel}>
                                             <input
@@ -847,7 +887,7 @@ const App: React.FC = () => {
                                                 onChange={(e) => handleViewportChange('include', e.target.checked)}
                                                 style={styles.checkbox}
                                             />
-                                            viewport を出力
+                                            {t.includeOption('viewport')}
                                         </label>
                                         {exportOptions.viewport.include && (
                                             <div style={{ ...styles.valueSelector, flexDirection: 'column', gap: '6px' }}>
@@ -858,7 +898,7 @@ const App: React.FC = () => {
                                                         onChange={(e) => handleViewportVariableChange('mobile', e.target.value)}
                                                         style={styles.smallSelect}
                                                     >
-                                                        <option value="">自由入力</option>
+                                                        <option value="">{t.freeInput}</option>
                                                         {viewportVariables.map(v => (
                                                             <option key={v.id} value={v.id}>{v.label} ({v.value}px)</option>
                                                         ))}
@@ -883,7 +923,7 @@ const App: React.FC = () => {
                                                         onChange={(e) => handleViewportVariableChange('tablet', e.target.value)}
                                                         style={styles.smallSelect}
                                                     >
-                                                        <option value="">自由入力</option>
+                                                        <option value="">{t.freeInput}</option>
                                                         {viewportVariables.map(v => (
                                                             <option key={v.id} value={v.id}>{v.label} ({v.value}px)</option>
                                                         ))}
@@ -907,7 +947,7 @@ const App: React.FC = () => {
                                 </>
                             )}
 
-                            <p style={styles.optionGroupTitle}>スタイルバリエーション:</p>
+                            <p style={styles.optionGroupTitle}>{t.groupStyleVariations}</p>
                             <div style={styles.optionRow}>
                                 <label style={styles.checkboxLabel}>
                                     <input
@@ -916,27 +956,27 @@ const App: React.FC = () => {
                                         onChange={(e) => setExportOptions(prev => ({ ...prev, styleVariations: e.target.checked }))}
                                         style={styles.checkbox}
                                     />
-                                    Theme Colors の2つ目以降のモードを styles/*.json として出力
+                                    {t.styleVariationsLabel}
                                 </label>
-                                <p style={styles.optionHint}>バリエーションがある場合は theme.json と合わせて zip でダウンロードします。</p>
+                                <p style={styles.optionHint}>{t.styleVariationsHint}</p>
                             </div>
                         </div>
 
                         <button style={styles.primaryButton} onClick={handleExport}>
                             <DownloadIcon color="white" size={18} />
-                            theme.json をダウンロード
+                            {t.downloadButton}
                         </button>
                     </div>
                 )}
 
                 {activeTab === 'generate' && (
                     <div style={styles.section}>
-                        <h2 style={styles.sectionTitle}>テンプレートから生成</h2>
+                        <h2 style={styles.sectionTitle}>{t.generateTitle}</h2>
                         <p style={styles.description}>
-                             theme.jsonのバージョンを選択して、デフォルトのスタイルとバリアブルをFigmaに作成します。
+                            {t.generateDescription}
                         </p>
                         <div style={styles.versionSelector}>
-                            <label style={styles.label}>theme.jsonバージョン:</label>
+                            <label style={styles.label}>{t.versionLabel}</label>
                             <select
                                 value={generatePresetKey}
                                 onChange={(e) => setGeneratePresetKey(e.target.value)}
@@ -948,23 +988,23 @@ const App: React.FC = () => {
                             </select>
                         </div>
                         <div style={styles.featureList}>
-                            <p style={styles.featureTitle}>作成されるもの:</p>
+                            <p style={styles.featureTitle}>{t.generateListTitle}</p>
                             <ul style={styles.featureItems}>
-                                <li>カラーパレット（バリアブル）</li>
-                                <li>デュオトーン（カラーを参照するバリアブル）</li>
-                                <li>フォントサイズ（テキストスタイル）</li>
-                                {generatePreset.schemaVersion >= 3 && <li>可変フォントサイズ Desktop / Mobile（バリアブル）</li>}
-                                <li>フォントファミリー（バリアブル）</li>
-                                <li>スペーシング（バリアブル）</li>
-                                <li>レイアウト幅 contentSize / wideSize（バリアブル）</li>
-                                {wpAtLeast(generatePreset.wpVersion, '6.9') && <li>角丸（バリアブル）</li>}
-                                {wpAtLeast(generatePreset.wpVersion, '7.0') && <li>ディメンション（バリアブル）</li>}
-                                {wpAtLeast(generatePreset.wpVersion, '7.1') && <li>ビューポート mobile / tablet（バリアブル）</li>}
+                                <li>{t.generateItemColors}</li>
+                                <li>{t.generateItemDuotone}</li>
+                                <li>{t.generateItemFontSizes}</li>
+                                {generatePreset.schemaVersion >= 3 && <li>{t.generateItemFluid}</li>}
+                                <li>{t.generateItemFontFamilies}</li>
+                                <li>{t.generateItemSpacing}</li>
+                                <li>{t.generateItemLayout}</li>
+                                {wpAtLeast(generatePreset.wpVersion, '6.9') && <li>{t.generateItemRadius}</li>}
+                                {wpAtLeast(generatePreset.wpVersion, '7.0') && <li>{t.generateItemDimensions}</li>}
+                                {wpAtLeast(generatePreset.wpVersion, '7.1') && <li>{t.generateItemViewport}</li>}
                             </ul>
                         </div>
                         <button style={styles.primaryButton} onClick={handleGenerate}>
                             <GenerateIcon color="white" size={18} />
-                            Figmaにスタイルを生成
+                            {t.generateButton}
                         </button>
                     </div>
                 )}
@@ -998,6 +1038,10 @@ const styles: { [key: string]: React.CSSProperties } = {
         color: '#333333',
     },
     header: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: '12px',
         padding: '20px 16px 12px',
         borderBottom: '1px solid #e5e5e5',
         background: `linear-gradient(135deg, ${wpColors.blue} 0%, ${wpColors.darkBlue} 100%)`,
@@ -1012,6 +1056,30 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '12px',
         opacity: 0.9,
     },
+    langSwitch: {
+        display: 'flex',
+        flexShrink: 0,
+        padding: '2px',
+        borderRadius: '999px',
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    langButton: {
+        padding: '3px 10px',
+        border: 'none',
+        borderRadius: '999px',
+        backgroundColor: 'transparent',
+        color: 'white',
+        fontSize: '11px',
+        fontWeight: 500,
+        cursor: 'pointer',
+        // No lift / glow on hover (index.css applies them to every button)
+        transform: 'none',
+        boxShadow: 'none',
+    },
+    langButtonActive: {
+        backgroundColor: 'white',
+        color: wpColors.blue,
+    },
     tabContainer: {
         display: 'flex',
         borderBottom: '1px solid #e5e5e5',
@@ -1021,7 +1089,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         flex: 1,
         padding: '12px 8px',
         border: 'none',
-        background: 'none',
+        backgroundColor: 'transparent',
         cursor: 'pointer',
         fontSize: '13px',
         fontWeight: 500,

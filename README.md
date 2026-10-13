@@ -24,6 +24,9 @@ Create a starter set of variables and styles based on theme.json schema versions
 - Every version also creates font families, layout widths (contentSize / wideSize) and duotone pairs referencing the palette
 - Version 3 also creates fluid font sizes (Desktop / Mobile modes)
 
+Language
+The plugin UI is available in Japanese and English. Switch it from the header; your choice is remembered (until then, it follows the browser / app language).
+
 ## How It Works
 1. Colors: Stored in variable collections named "Theme Colors"
 2. Typography: Stored as text styles under "Typography/" folder
@@ -43,6 +46,13 @@ Create a starter set of variables and styles based on theme.json schema versions
 - Quickly bootstrap a new theme design with default WordPress presets
 
 ## Changelog
+
+### v1.5.0 (2026-10-14)
+- 英語に対応（プラグインの画面と通知）
+    - ヘッダーで「日本語 / English」を切り替え。選んだ言語は次回以降も保持（未選択のときはブラウザ・アプリの言語に合わせる）
+    - 完了・エラーの通知も選んだ言語で表示
+- 修正
+    - 一度選んだタブが、ほかのタブに切り替えたあともグレーの背景のまま残る問題を修正
 
 ### v1.4.0 (2026-09-30)
 - Figma バリアブルとの相互変換を追加（生成・インポート・エクスポート）

@@ -1,4 +1,9 @@
+import { isLang, Messages, MESSAGES } from '../common/i18n';
+
 figma.showUI(__html__, { width: 400, height: 600 });
+
+// Key of the UI language chosen by the user, kept per user in figma.clientStorage
+const LANGUAGE_STORAGE_KEY = 'language';
 
 // Helper to convert hex to RGB
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -185,7 +190,7 @@ async function getVariablesInCollections(prefix: string): Promise<Variable[]> {
     return allVariables.filter(v => ids.has(v.variableCollectionId));
 }
 
-async function importThemeJson(theme: any) {
+async function importThemeJson(theme: any, t: Messages) {
     console.log('Importing theme...', theme);
 
     // 1. Process Colors -> Variables
@@ -216,7 +221,7 @@ async function importThemeJson(theme: any) {
                 }
             }
         }
-        figma.notify(`Imported ${theme.settings.color.palette.length} colors to Variables.`);
+        figma.notify(t.importedColors(theme.settings.color.palette.length));
     }
 
     // 2. Process Font Sizes -> Text Styles
@@ -256,14 +261,12 @@ async function importThemeJson(theme: any) {
         }
         const notes: string[] = [];
         if (skippedSizes.length > 0) {
-            notes.push(`Skipped ${skippedSizes.length} sizes with unsupported units: ${skippedSizes.join(', ')}`);
+            notes.push(t.skippedFontSizes(skippedSizes));
         }
         if (fluidSkipped > 0) {
-            notes.push(`${fluidSkipped} fluid sizes were skipped (variable modes are not available on this plan)`);
+            notes.push(t.skippedFluid(fluidSkipped));
         }
-        figma.notify(notes.length > 0
-            ? `Imported typography sizes. ${notes.join('. ')}.`
-            : `Imported typography sizes.`, notes.length > 0 ? { timeout: 8000 } : undefined);
+        figma.notify(t.importedFontSizes(notes), notes.length > 0 ? { timeout: 8000 } : undefined);
     }
 
     // 2b. Process Duotone -> Color Variables "<name>/shadow" and "<name>/highlight"
@@ -298,7 +301,7 @@ async function importThemeJson(theme: any) {
 
     // 3. Process Spacing Sizes / Dimension Sizes -> Number Variables (px / rem)
     // The slug is kept in the WEB code syntax so that export restores it (e.g. "20" for "Tiny")
-    const sizePresets: { list: any; collectionName: string; presetType: string }[] = [
+    const sizePresets: { list: any; collectionName: string; presetType: 'spacing' | 'dimension' }[] = [
         { list: theme.settings?.spacing?.spacingSizes, collectionName: 'Theme Spacing', presetType: 'spacing' },
         { list: theme.settings?.dimensions?.dimensionSizes, collectionName: 'Theme Dimensions', presetType: 'dimension' },
     ];
@@ -316,7 +319,7 @@ async function importThemeJson(theme: any) {
         }
         if (items.length > 0) {
             await upsertVariables(collectionName, 'FLOAT', items);
-            figma.notify(`Imported ${items.length} of ${list.length} ${presetType} sizes.`);
+            figma.notify(t.importedSizes(presetType, items.length, list.length));
         }
     }
 
@@ -431,7 +434,7 @@ function wpAtLeast(wpVersion: string, minVersion: string): boolean {
     return true;
 }
 
-async function exportThemeJson(options?: ExportOptions) {
+async function exportThemeJson(t: Messages, options?: ExportOptions) {
     const schemaVersion = options?.schemaVersion ?? 3;
     const wpVersion = options?.wpVersion ?? '6.6';
     const isWp7Plus = wpAtLeast(wpVersion, '7.0');
@@ -716,9 +719,7 @@ async function exportThemeJson(options?: ExportOptions) {
     }
 
     figma.ui.postMessage({ type: 'export-theme-json-result', payload: { theme, variations } });
-    figma.notify(variations.length > 0
-        ? `Version ${schemaVersion} (WordPress ${wpVersion}+) theme.json + ${variations.length} style variations exported!`
-        : `Version ${schemaVersion} (WordPress ${wpVersion}+) theme.json exported!`);
+    figma.notify(t.exported(`Version ${schemaVersion} (WordPress ${wpVersion}+)`, variations.length));
 }
 
 // color.palette from "Theme Colors" collections (mode by name, falling back to the first mode)
@@ -910,7 +911,7 @@ function getDefaultTemplate(schemaVersion: number, wpVersion: string) {
     }
 }
 
-async function generateThemeJson(schemaVersion: number, wpVersion: string) {
+async function generateThemeJson(schemaVersion: number, wpVersion: string, t: Messages) {
     const template = getDefaultTemplate(schemaVersion, wpVersion);
     const suffix = `v${schemaVersion}-wp${wpVersion}`;
     let createdColors = 0;
@@ -1052,11 +1053,19 @@ async function generateThemeJson(schemaVersion: number, wpVersion: string) {
         }
     }
 
-    const dimensionPart = template.dimensions.length > 0 ? `, ディメンション: ${createdDimensions}個` : '';
-    const radiusPart = template.radius.length > 0 ? `, 角丸: ${createdRadius}個` : '';
-    const viewportPart = template.viewport.length > 0 ? `, ビューポート: ${createdViewport}個` : '';
-    const fluidPart = fluidBound > 0 ? `（可変サイズ: ${fluidBound}個）` : (fluidUnavailable ? '（可変サイズはモードが使えないためスキップ）' : '');
-    const message = `生成完了！ カラー: ${createdColors}個, デュオトーン: ${createdDuotone}組, フォント: ${createdFontSizes}個${fluidPart}, フォントファミリー: ${createdFontFamilies}個, スペーシング: ${createdSpacing}個${dimensionPart}, レイアウト: ${createdLayout}個${radiusPart}${viewportPart}`;
+    const message = t.generated({
+        colors: createdColors,
+        duotone: createdDuotone,
+        fontSizes: createdFontSizes,
+        fluidBound,
+        fluidUnavailable,
+        fontFamilies: createdFontFamilies,
+        spacing: createdSpacing,
+        dimensions: template.dimensions.length > 0 ? createdDimensions : undefined,
+        layout: createdLayout,
+        radius: template.radius.length > 0 ? createdRadius : undefined,
+        viewport: template.viewport.length > 0 ? createdViewport : undefined,
+    });
     figma.notify(message);
     return message;
 }
@@ -1067,23 +1076,32 @@ function postStatus(message: string) {
 }
 
 figma.ui.onmessage = async (msg) => {
-    if (msg.type === 'import-theme-json') {
+    // Notifications follow the language shown in the UI (sent with each request)
+    const lang = msg.lang;
+    const t = MESSAGES[isLang(lang) ? lang : 'ja'];
+    if (msg.type === 'get-language') {
+        // The saved choice, or null when the user has not chosen one yet (the UI then detects it)
+        const saved = await figma.clientStorage.getAsync(LANGUAGE_STORAGE_KEY);
+        figma.ui.postMessage({ type: 'language', payload: isLang(saved) ? saved : null });
+    } else if (msg.type === 'save-language') {
+        if (isLang(msg.payload)) await figma.clientStorage.setAsync(LANGUAGE_STORAGE_KEY, msg.payload);
+    } else if (msg.type === 'import-theme-json') {
         try {
-            await importThemeJson(msg.payload);
-            figma.notify('Theme imported successfully!');
-            postStatus('インポート完了！');
+            await importThemeJson(msg.payload, t);
+            figma.notify(t.importDone);
+            postStatus(t.importDone);
         } catch (e: any) {
             console.error(e);
-            figma.notify('Error importing theme: ' + e.message);
-            postStatus('エラー: インポートに失敗しました（' + e.message + '）');
+            figma.notify(t.importFailed(e.message));
+            postStatus(t.importFailed(e.message));
         }
     } else if (msg.type === 'export-theme-json') {
         try {
-            await exportThemeJson(msg.payload);
+            await exportThemeJson(t, msg.payload);
         } catch (e: any) {
             console.error(e);
-            figma.notify('Error exporting theme: ' + e.message);
-            postStatus('エラー: エクスポートに失敗しました（' + e.message + '）');
+            figma.notify(t.exportFailed(e.message));
+            postStatus(t.exportFailed(e.message));
         }
     } else if (msg.type === 'get-viewport-variables') {
         // Number variables in "Theme Viewport" collections, for the viewport selector in the export tab
@@ -1099,12 +1117,12 @@ figma.ui.onmessage = async (msg) => {
         try {
             const schemaVersion = msg.payload?.schemaVersion || 3;
             const wpVersion = msg.payload?.wpVersion || '6.6';
-            const message = await generateThemeJson(schemaVersion, wpVersion);
+            const message = await generateThemeJson(schemaVersion, wpVersion, t);
             postStatus(message);
         } catch (e: any) {
             console.error(e);
-            figma.notify('Error generating theme: ' + e.message);
-            postStatus('エラー: 生成に失敗しました（' + e.message + '）');
+            figma.notify(t.generateFailed(e.message));
+            postStatus(t.generateFailed(e.message));
         }
     }
 };
