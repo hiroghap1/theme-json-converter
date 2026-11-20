@@ -1,4 +1,5 @@
 import { isLang, Messages, MESSAGES } from '../common/i18n';
+import { BACKGROUND_CLIP_VALUES, BackgroundClipValue, Feature, supports } from '../common/features';
 
 figma.showUI(__html__, { width: 400, height: 600 });
 
@@ -53,14 +54,18 @@ function presetSlug(variable: Variable, presetType: string): string {
     return slugFromCssVar(variable.codeSyntax?.WEB ?? '', presetType) ?? nameToSlug(variable.name);
 }
 
-// Write the font-size slug into a text style's description, keeping any other description text
-function setFontSizeSlug(style: TextStyle, slug: string) {
-    const cssVar = presetCssVar('font-size', slug);
-    const pattern = /var\(--wp--preset--font-size--[A-Za-z0-9_-]+\)/;
+// Replace the part of a style description matching `pattern` with `text` (appended on a new line when missing),
+// keeping any other description text
+function setDescriptionPart(style: BaseStyle, pattern: RegExp, text: string) {
     const description = style.description;
     style.description = pattern.test(description)
-        ? description.replace(pattern, cssVar)
-        : (description ? `${description}\n${cssVar}` : cssVar);
+        ? description.replace(pattern, () => text)
+        : (description ? `${description}\n${text}` : text);
+}
+
+// Write the font-size slug into a text style's description
+function setFontSizeSlug(style: TextStyle, slug: string) {
+    setDescriptionPart(style, /var\(--wp--preset--font-size--[A-Za-z0-9_-]+\)/, presetCssVar('font-size', slug));
 }
 
 // First family name of a CSS font-family stack: '"Fira Code", monospace' -> 'Fira Code'
@@ -190,6 +195,253 @@ async function getVariablesInCollections(prefix: string): Promise<Variable[]> {
     return allVariables.filter(v => ids.has(v.variableCollectionId));
 }
 
+// Text shadow presets (WordPress 7.2+) <-> effect styles "Text Shadow/<name>" made of drop shadows.
+// The style description keeps the slug and the original CSS value:
+//   var(--wp--preset--text-shadow--<slug>)
+//   text-shadow: <CSS value>
+// Export writes the original CSS back while it still describes the same shadows (keeps em units and palette references)
+const TEXT_SHADOW_PREFIX = 'Text Shadow/';
+const TEXT_SHADOW_CSS_PATTERN = /^text-shadow:\s*(.+)$/m;
+
+// One shadow of a CSS text-shadow list, in px. colorSlug is set for a palette color: var(--wp--preset--color--<slug>)
+interface ShadowLayer {
+    x: number;
+    y: number;
+    blur: number;
+    color: RGBA;
+    colorSlug?: string;
+}
+
+interface PaletteColor {
+    variable: Variable;
+    rgb: RGB;
+}
+
+// Color variables of "Theme Colors" collections by slug (the plain "Theme Colors" collection, which import writes to, wins)
+async function getPaletteBySlug(): Promise<Map<string, PaletteColor>> {
+    const collections = (await figma.variables.getLocalVariableCollectionsAsync())
+        .filter(c => c.name.startsWith('Theme Colors'))
+        .sort((a, b) => Number(b.name === 'Theme Colors') - Number(a.name === 'Theme Colors'));
+    const variables = await figma.variables.getLocalVariablesAsync('COLOR');
+    const palette = new Map<string, PaletteColor>();
+    for (const collection of collections) {
+        for (const variable of variables.filter(v => v.variableCollectionId === collection.id)) {
+            const slug = presetSlug(variable, 'color');
+            if (palette.has(slug)) continue;
+            const value = await resolveVariableValue(variable);
+            if (isRgb(value)) palette.set(slug, { variable, rgb: { r: value.r, g: value.g, b: value.b } });
+        }
+    }
+    return palette;
+}
+
+// Split a CSS value on commas or whitespace outside parentheses: "1px 1px rgba(0, 0, 0, .5), 0 0 2px red"
+function splitCss(value: string, separator: 'comma' | 'space'): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (const ch of value) {
+        if (ch === '(') depth++;
+        if (ch === ')') depth = Math.max(0, depth - 1);
+        const isSeparator = depth === 0 && (separator === 'comma' ? ch === ',' : /\s/.test(ch));
+        if (isSeparator) {
+            if (current.trim()) parts.push(current.trim());
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+    if (current.trim()) parts.push(current.trim());
+    return parts;
+}
+
+// Shadow offset / blur in px: "2px", "0.1em" / "0.1rem" (1em = 16px, Figma has no font-relative unit), unitless 0
+function parseShadowLength(token: string): number | null {
+    const match = /^(-?(?:\d+|\d*\.\d+))(px|em|rem)?$/.exec(token);
+    if (!match) return null;
+    const num = parseFloat(match[1]);
+    if (!match[2]) return num === 0 ? 0 : null;
+    return match[2] === 'px' ? num : num * 16;
+}
+
+// Shadow color: #hex (3/4/6/8 digits), rgb() / rgba(), black / white / transparent,
+// or a palette reference var(--wp--preset--color--<slug>)
+function parseShadowColor(token: string, palette: Map<string, PaletteColor>): { color: RGBA; colorSlug?: string } | null {
+    const slug = /^var\(\s*--wp--preset--color--([A-Za-z0-9_-]+)\s*\)$/.exec(token)?.[1];
+    if (slug) {
+        const entry = palette.get(slug);
+        return entry ? { color: { ...entry.rgb, a: 1 }, colorSlug: slug } : null;
+    }
+    const keywords: Record<string, RGBA> = {
+        black: { r: 0, g: 0, b: 0, a: 1 },
+        white: { r: 1, g: 1, b: 1, a: 1 },
+        transparent: { r: 0, g: 0, b: 0, a: 0 },
+    };
+    const keyword = keywords[token.toLowerCase()];
+    if (keyword) return { color: keyword };
+    const hex = /^#([a-f\d]{3,4}|[a-f\d]{6}|[a-f\d]{8})$/i.exec(token)?.[1];
+    if (hex) {
+        const full = hex.length <= 4 ? hex.split('').map(c => c + c).join('') : hex;
+        const channel = (i: number) => parseInt(full.slice(i * 2, i * 2 + 2), 16) / 255;
+        return { color: { r: channel(0), g: channel(1), b: channel(2), a: full.length === 8 ? channel(3) : 1 } };
+    }
+    // "rgba(0, 0, 0, 0.5)" / "rgb(0 0 0 / 50%)"
+    const args = /^rgba?\((.*)\)$/i.exec(token)?.[1];
+    if (args) {
+        const parts = args.split(/[\s,/]+/).filter(Boolean);
+        if (parts.length !== 3 && parts.length !== 4) return null;
+        const values = parts.map((part, i) => {
+            const percent = /^(\d*\.?\d+)%$/.exec(part);
+            if (percent) return parseFloat(percent[1]) / 100;
+            if (!/^\d*\.?\d+$/.test(part)) return NaN;
+            return i < 3 ? parseFloat(part) / 255 : parseFloat(part);
+        });
+        if (values.some(v => isNaN(v))) return null;
+        const [r, g, b, a = 1] = values.map(v => Math.min(1, Math.max(0, v)));
+        return { color: { r, g, b, a } };
+    }
+    return null;
+}
+
+// CSS text-shadow list -> shadow layers, or null when a part is not supported (other units, color functions, ...)
+function parseTextShadow(value: string, palette: Map<string, PaletteColor>): ShadowLayer[] | null {
+    const layers: ShadowLayer[] = [];
+    for (const shadow of splitCss(value, 'comma')) {
+        const lengths: number[] = [];
+        let color: { color: RGBA; colorSlug?: string } | undefined;
+        for (const token of splitCss(shadow, 'space')) {
+            const length = parseShadowLength(token);
+            if (length !== null) {
+                lengths.push(length);
+                continue;
+            }
+            const parsed = color ? null : parseShadowColor(token, palette);
+            if (!parsed) return null;
+            color = parsed;
+        }
+        if (lengths.length < 2 || lengths.length > 3 || (lengths[2] ?? 0) < 0) return null;
+        layers.push({
+            x: lengths[0],
+            y: lengths[1],
+            blur: lengths[2] ?? 0,
+            // Without a color CSS uses currentColor, which an effect style cannot follow: black is used instead
+            color: color?.color ?? { r: 0, g: 0, b: 0, a: 1 },
+            colorSlug: color?.colorSlug,
+        });
+    }
+    return layers.length > 0 ? layers : null;
+}
+
+// Shadow layers -> drop shadow effects. Palette colors are bound to their "Theme Colors" variable
+function layersToEffects(layers: ShadowLayer[], palette: Map<string, PaletteColor>): Effect[] {
+    return layers.map(layer => {
+        const effect: DropShadowEffect = {
+            type: 'DROP_SHADOW',
+            color: layer.color,
+            offset: { x: layer.x, y: layer.y },
+            radius: layer.blur,
+            spread: 0,
+            visible: true,
+            blendMode: 'NORMAL',
+            showShadowBehindNode: false,
+        };
+        const variable = layer.colorSlug ? palette.get(layer.colorSlug)?.variable : undefined;
+        return variable ? figma.variables.setBoundVariableForEffect(effect, 'color', variable) : effect;
+    });
+}
+
+// Visible drop shadows of an effect style. A color bound to a "Theme Colors" variable keeps the variable's slug
+async function effectStyleLayers(style: EffectStyle): Promise<ShadowLayer[]> {
+    const layers: ShadowLayer[] = [];
+    for (const effect of style.effects) {
+        if (effect.type !== 'DROP_SHADOW' || !effect.visible) continue;
+        let color: RGBA = effect.color;
+        let colorSlug: string | undefined;
+        const alias = effect.boundVariables?.color;
+        const variable = alias ? await figma.variables.getVariableByIdAsync(alias.id) : null;
+        if (variable) {
+            const value = await resolveVariableValue(variable);
+            if (isRgb(value)) color = { r: value.r, g: value.g, b: value.b, a: (value as RGBA).a ?? 1 };
+            const collection = await figma.variables.getVariableCollectionByIdAsync(variable.variableCollectionId);
+            if (collection?.name.startsWith('Theme Colors')) colorSlug = presetSlug(variable, 'color');
+        }
+        layers.push({ x: effect.offset.x, y: effect.offset.y, blur: effect.radius, color, colorSlug });
+    }
+    return layers;
+}
+
+function sameLayers(a: ShadowLayer[], b: ShadowLayer[]): boolean {
+    const near = (x: number, y: number, tolerance: number) => Math.abs(x - y) <= tolerance;
+    return a.length === b.length && a.every((layer, i) => {
+        const other = b[i];
+        const sameColor = layer.colorSlug || other.colorSlug
+            ? layer.colorSlug === other.colorSlug
+            : (['r', 'g', 'b', 'a'] as const).every(key => near(layer.color[key], other.color[key], 0.002));
+        return sameColor && near(layer.x, other.x, 0.01) && near(layer.y, other.y, 0.01) && near(layer.blur, other.blur, 0.01);
+    });
+}
+
+// Shadow layers -> CSS text-shadow, in px: "1px 1px 2px rgba(0, 0, 0, 0.3)"
+function layersToCss(layers: ShadowLayer[]): string {
+    const round = (n: number, digits: number) => Math.round(n * 10 ** digits) / 10 ** digits;
+    const px = (n: number) => (round(n, 2) === 0 ? '0' : `${round(n, 2)}px`);
+    return layers.map(layer => {
+        const { r, g, b, a } = layer.color;
+        const color = layer.colorSlug
+            ? presetCssVar('color', layer.colorSlug)
+            : (a > 0.999
+                ? rgbToHex(r, g, b)
+                : `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${round(a, 3)})`);
+        return `${px(layer.x)} ${px(layer.y)} ${px(layer.blur)} ${color}`;
+    }).join(', ');
+}
+
+// Create / update effect styles "Text Shadow/<name>" from text shadow presets.
+// Returns the number of new styles and the presets whose value is not supported
+async function upsertTextShadowStyles(presets: { name: string; slug: string; textShadow: string }[]): Promise<{ created: number; skipped: string[] }> {
+    const palette = await getPaletteBySlug();
+    const styles = await figma.getLocalEffectStylesAsync();
+    let created = 0;
+    const skipped: string[] = [];
+    for (const preset of presets) {
+        const layers = parseTextShadow(preset.textShadow, palette);
+        if (!layers) {
+            skipped.push(`${preset.name} (${preset.textShadow})`);
+            continue;
+        }
+        const styleName = `${TEXT_SHADOW_PREFIX}${preset.name}`;
+        let style = styles.find(s => s.name === styleName);
+        if (!style) {
+            style = figma.createEffectStyle();
+            style.name = styleName;
+            created++;
+        }
+        style.effects = layersToEffects(layers, palette);
+        setDescriptionPart(style, /var\(--wp--preset--text-shadow--[A-Za-z0-9_-]+\)/, presetCssVar('text-shadow', preset.slug));
+        setDescriptionPart(style, TEXT_SHADOW_CSS_PATTERN, `text-shadow: ${preset.textShadow}`);
+    }
+    return { created, skipped };
+}
+
+// settings.typography.textShadowPresets from effect styles "Text Shadow/<name>"
+async function buildTextShadowPresets(): Promise<any[]> {
+    const palette = await getPaletteBySlug();
+    const presets: any[] = [];
+    for (const style of await figma.getLocalEffectStylesAsync()) {
+        if (!style.name.startsWith(TEXT_SHADOW_PREFIX)) continue;
+        const name = style.name.slice(TEXT_SHADOW_PREFIX.length);
+        const slug = slugFromCssVar(style.description, 'text-shadow') ?? nameToSlug(name);
+        if (presets.some(p => p.slug === slug)) continue;
+        const layers = await effectStyleLayers(style);
+        if (layers.length === 0) continue;
+        const original = TEXT_SHADOW_CSS_PATTERN.exec(style.description)?.[1].trim();
+        const originalLayers = original ? parseTextShadow(original, palette) : null;
+        const textShadow = original && originalLayers && sameLayers(originalLayers, layers) ? original : layersToCss(layers);
+        presets.push({ name, slug, textShadow });
+    }
+    return presets;
+}
+
 async function importThemeJson(theme: any, t: Messages) {
     console.log('Importing theme...', theme);
 
@@ -299,6 +551,20 @@ async function importThemeJson(theme: any, t: Messages) {
         }
     }
 
+    // 2c. Process Text Shadow Presets -> Effect Styles "Text Shadow/<name>"
+    // Palette references (var(--wp--preset--color--*)) are bound to the "Theme Colors" variables
+    if (Array.isArray(theme.settings?.typography?.textShadowPresets)) {
+        const presets = theme.settings.typography.textShadowPresets.filter((p: any) =>
+            p && typeof p.name === 'string' && p.name && typeof p.slug === 'string' && typeof p.textShadow === 'string');
+        if (presets.length > 0) {
+            const { skipped } = await upsertTextShadowStyles(presets);
+            figma.notify(
+                t.importedTextShadows(presets.length - skipped.length, skipped),
+                skipped.length > 0 ? { timeout: 8000 } : undefined,
+            );
+        }
+    }
+
     // 3. Process Spacing Sizes / Dimension Sizes -> Number Variables (px / rem)
     // The slug is kept in the WEB code syntax so that export restores it (e.g. "20" for "Tiny")
     const sizePresets: { list: any; collectionName: string; presetType: 'spacing' | 'dimension' }[] = [
@@ -401,11 +667,14 @@ interface ExportOptions {
     defaultDuotone: OptionSetting;
     defaultFontSizes: OptionSetting;
     defaultSpacingSizes: OptionSetting;
-    textIndent: OptionSetting<'subsequent' | 'all'>;
+    textIndent: OptionSetting<'subsequent' | 'all' | false>;
+    textShadow: OptionSetting;
+    defaultTextShadowPresets: OptionSetting;
     width: OptionSetting;
     height: OptionSetting;
     minWidth: OptionSetting;
     backgroundGradient: OptionSetting;
+    backgroundClip: OptionSetting<boolean | BackgroundClipValue[]>;
     blockVisibilityAllowEditing: OptionSetting;
     viewport: ViewportOption;
     styleVariations: boolean;
@@ -420,24 +689,11 @@ function getSchemaUrl(wpVersion: string): string {
     return `https://schemas.wp.org/wp/${wpVersion}/theme.json`;
 }
 
-// Compare WP version strings like "6.6" / "7.0" / "7.1.2" numerically
-function wpAtLeast(wpVersion: string, minVersion: string): boolean {
-    const parse = (s: string) => s.split('.').map(n => parseInt(n, 10) || 0);
-    const a = parse(wpVersion);
-    const b = parse(minVersion);
-    const len = Math.max(a.length, b.length);
-    for (let i = 0; i < len; i++) {
-        const ai = a[i] ?? 0;
-        const bi = b[i] ?? 0;
-        if (ai !== bi) return ai > bi;
-    }
-    return true;
-}
-
 async function exportThemeJson(t: Messages, options?: ExportOptions) {
     const schemaVersion = options?.schemaVersion ?? 3;
     const wpVersion = options?.wpVersion ?? '6.6';
-    const isWp7Plus = wpAtLeast(wpVersion, '7.0');
+    // Each setting is written only when the target WordPress version's schema has it (src/common/features.ts)
+    const can = (feature: Feature) => supports(wpVersion, feature);
 
     const theme: any = {
         $schema: getSchemaUrl(wpVersion),
@@ -445,26 +701,19 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
         settings: {}
     };
 
-    // Add appearanceTools if enabled (schema version 2+)
-    if (schemaVersion >= 2 && options?.appearanceTools?.include) {
+    if (can('appearanceTools') && options?.appearanceTools?.include) {
         theme.settings.appearanceTools = options.appearanceTools.value;
     }
 
     // Color settings
     theme.settings.color = {};
-    
-    if (options) {
-        if (options.defaultPalette?.include) {
-            theme.settings.color.defaultPalette = options.defaultPalette.value;
-        }
-        if (options.defaultGradients?.include) {
-            theme.settings.color.defaultGradients = options.defaultGradients.value;
-        }
-        if (options.defaultDuotone?.include) {
-            theme.settings.color.defaultDuotone = options.defaultDuotone.value;
+
+    for (const key of ['defaultPalette', 'defaultGradients', 'defaultDuotone'] as const) {
+        if (can(key) && options?.[key]?.include) {
+            theme.settings.color[key] = options[key].value;
         }
     }
-    
+
     // 1. Export Colors from Variables (first mode)
     const collections = await figma.variables.getLocalVariableCollectionsAsync();
     const allVariables = await figma.variables.getLocalVariablesAsync();
@@ -479,13 +728,20 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
     // Typography settings
     theme.settings.typography = {};
 
-    if (options?.defaultFontSizes?.include) {
+    if (can('defaultFontSizes') && options?.defaultFontSizes?.include) {
         theme.settings.typography.defaultFontSizes = options.defaultFontSizes.value;
     }
 
-    // textIndent (WordPress 7.0+)
-    if (isWp7Plus && options?.textIndent?.include) {
+    // textIndent: false / "subsequent" / "all"
+    if (can('textIndent') && options?.textIndent?.include) {
         theme.settings.typography.textIndent = options.textIndent.value;
+    }
+
+    // Text shadow (WordPress 7.2+)
+    for (const key of ['textShadow', 'defaultTextShadowPresets'] as const) {
+        if (can(key) && options?.[key]?.include) {
+            theme.settings.typography[key] = options[key].value;
+        }
     }
 
     theme.settings.typography.fontSizes = [];
@@ -506,7 +762,7 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
                 size: `${style.fontSize}px`
             };
             // Font size bound to a variable with several modes -> fluid { min, max } (smallest / largest mode value)
-            const fluid = await getFluidRange(style);
+            const fluid = can('fluid') ? await getFluidRange(style) : null;
             if (fluid) {
                 entry.size = `${fluid.max}px`;
                 entry.fluid = { min: `${fluid.min}px`, max: `${fluid.max}px` };
@@ -518,7 +774,7 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
 
     // 2b. Export Font Families from String Variables
     const fontFamilies: any[] = [];
-    for (const variable of await getVariablesInCollections('Theme Font Families')) {
+    for (const variable of can('fontFamilies') ? await getVariablesInCollections('Theme Font Families') : []) {
         const value = await resolveVariableValue(variable);
         if (typeof value !== 'string' || !value) continue;
         const slug = presetSlug(variable, 'font-family');
@@ -534,6 +790,14 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
         theme.settings.typography.fontFamilies = fontFamilies;
     }
 
+    // 2c. Export Text Shadow Presets from Effect Styles "Text Shadow/<name>"
+    if (can('textShadowPresets')) {
+        const textShadowPresets = await buildTextShadowPresets();
+        if (textShadowPresets.length > 0) {
+            theme.settings.typography.textShadowPresets = textShadowPresets;
+        }
+    }
+
     // Layout settings (contentSize / wideSize)
     const layout: any = {};
     for (const variable of await getVariablesInCollections('Theme Layout')) {
@@ -547,8 +811,8 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
         theme.settings.layout = layout;
     }
 
-    // Border radius sizes (WordPress 6.9+)
-    if (wpAtLeast(wpVersion, '6.9')) {
+    // Border radius sizes
+    if (can('radiusSizes')) {
         const radiusSizes: any[] = [];
         for (const variable of await getVariablesInCollections('Theme Radius')) {
             const value = await resolveVariableValue(variable);
@@ -562,17 +826,16 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
         }
     }
 
-    // Spacing settings (schema version 2+)
-    if (schemaVersion >= 2) {
-        theme.settings.spacing = {};
-        
-        if (options?.defaultSpacingSizes?.include) {
-            theme.settings.spacing.defaultSpacingSizes = options.defaultSpacingSizes.value;
-        }
-        
-        theme.settings.spacing.spacingSizes = [];
+    // Spacing settings
+    theme.settings.spacing = {};
 
-        // 3. Export Spacing from Variables
+    if (can('defaultSpacingSizes') && options?.defaultSpacingSizes?.include) {
+        theme.settings.spacing.defaultSpacingSizes = options.defaultSpacingSizes.value;
+    }
+
+    // 3. Export Spacing from Variables
+    if (can('spacingSizes')) {
+        const spacingSizes: any[] = [];
         const spacingCollections = collections.filter(c => c.name.startsWith("Theme Spacing"));
         for (const collection of spacingCollections) {
             const modeId = collection.modes[0]?.modeId;
@@ -582,8 +845,8 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
                     const value = variable.valuesByMode[modeId];
                     if (typeof value === 'number') {
                         const slug = presetSlug(variable, 'spacing');
-                        if (!theme.settings.spacing.spacingSizes.some((s: any) => s.slug === slug)) {
-                            theme.settings.spacing.spacingSizes.push({
+                        if (!spacingSizes.some(s => s.slug === slug)) {
+                            spacingSizes.push({
                                 slug: slug,
                                 name: variable.name,
                                 size: `${value}px`
@@ -594,82 +857,89 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
             }
         }
 
-        if (theme.settings.spacing.spacingSizes.length === 0) {
-            delete theme.settings.spacing.spacingSizes;
+        if (spacingSizes.length > 0) {
+            theme.settings.spacing.spacingSizes = spacingSizes;
         }
     }
 
-    // Dimensions settings (WordPress 7.0+)
-    if (isWp7Plus) {
-        const dimensions: any = {};
+    // Dimensions settings
+    const dimensions: any = {};
 
-        if (options?.width?.include) {
-            dimensions.width = options.width.value;
+    for (const key of ['width', 'height', 'minWidth'] as const) {
+        if (can(key) && options?.[key]?.include) {
+            dimensions[key] = options[key].value;
         }
-        if (options?.height?.include) {
-            dimensions.height = options.height.value;
-        }
-        // minWidth (WordPress 7.1+)
-        if (wpAtLeast(wpVersion, '7.1') && options?.minWidth?.include) {
-            dimensions.minWidth = options.minWidth.value;
-        }
+    }
 
-        const dimensionSizes: any[] = [];
-        const dimensionCollections = collections.filter(c => c.name.startsWith("Theme Dimensions"));
-        for (const collection of dimensionCollections) {
-            const modeId = collection.modes[0]?.modeId;
-            if (modeId) {
-                const variables = allVariables.filter(v => v.variableCollectionId === collection.id);
-                for (const variable of variables) {
-                    const value = variable.valuesByMode[modeId];
-                    if (typeof value === 'number') {
-                        const slug = presetSlug(variable, 'dimension');
-                        if (!dimensionSizes.some(d => d.slug === slug)) {
-                            dimensionSizes.push({
-                                slug: slug,
-                                name: variable.name,
-                                size: `${value}px`
-                            });
-                        }
+    const dimensionSizes: any[] = [];
+    const dimensionCollections = can('dimensionSizes') ? collections.filter(c => c.name.startsWith("Theme Dimensions")) : [];
+    for (const collection of dimensionCollections) {
+        const modeId = collection.modes[0]?.modeId;
+        if (modeId) {
+            const variables = allVariables.filter(v => v.variableCollectionId === collection.id);
+            for (const variable of variables) {
+                const value = variable.valuesByMode[modeId];
+                if (typeof value === 'number') {
+                    const slug = presetSlug(variable, 'dimension');
+                    if (!dimensionSizes.some(d => d.slug === slug)) {
+                        dimensionSizes.push({
+                            slug: slug,
+                            name: variable.name,
+                            size: `${value}px`
+                        });
                     }
                 }
             }
         }
-
-        if (dimensionSizes.length > 0) {
-            dimensions.dimensionSizes = dimensionSizes;
-        }
-
-        if (Object.keys(dimensions).length > 0) {
-            theme.settings.dimensions = dimensions;
-        }
     }
 
-    // Background / Block Visibility / Viewport settings (WordPress 7.1+)
-    if (wpAtLeast(wpVersion, '7.1')) {
-        if (options?.backgroundGradient?.include) {
-            theme.settings.background = { gradient: options.backgroundGradient.value };
+    if (dimensionSizes.length > 0) {
+        dimensions.dimensionSizes = dimensionSizes;
+    }
+
+    if (Object.keys(dimensions).length > 0) {
+        theme.settings.dimensions = dimensions;
+    }
+
+    // Background settings
+    const background: any = {};
+    if (can('backgroundGradient') && options?.backgroundGradient?.include) {
+        background.gradient = options.backgroundGradient.value;
+    }
+    if (can('backgroundClip') && options?.backgroundClip?.include) {
+        // true / false, or the chosen CSS values in schema order (none chosen = false)
+        const value = options.backgroundClip.value;
+        if (Array.isArray(value)) {
+            const values = BACKGROUND_CLIP_VALUES.filter(v => value.indexOf(v) !== -1);
+            background.backgroundClip = values.length > 0 ? values : false;
+        } else {
+            background.backgroundClip = value;
         }
-        if (options?.blockVisibilityAllowEditing?.include) {
-            theme.settings.blockVisibility = { allowEditing: options.blockVisibilityAllowEditing.value };
+    }
+    if (Object.keys(background).length > 0) {
+        theme.settings.background = background;
+    }
+
+    // Block Visibility / Viewport settings
+    if (can('blockVisibilityAllowEditing') && options?.blockVisibilityAllowEditing?.include) {
+        theme.settings.blockVisibility = { allowEditing: options.blockVisibilityAllowEditing.value };
+    }
+    if (can('viewport') && options?.viewport?.include) {
+        // Values not matching the schema pattern are skipped (WordPress ignores them anyway)
+        const viewportPattern = /^(?:\d+|\d*\.\d+)(?:px|em|rem)$/;
+        const viewport: any = {};
+        for (const key of ['mobile', 'tablet'] as const) {
+            let value = options.viewport.value[key];
+            const variableId = options.viewport.variableIds?.[key];
+            if (variableId) {
+                const variable = await figma.variables.getVariableByIdAsync(variableId);
+                const resolved = variable ? await resolveVariableValue(variable) : undefined;
+                value = typeof resolved === 'number' ? `${resolved}px` : '';
+            }
+            if (viewportPattern.test(value)) viewport[key] = value;
         }
-        if (options?.viewport?.include) {
-            // Values not matching the schema pattern are skipped (WordPress ignores them anyway)
-            const viewportPattern = /^(?:\d+|\d*\.\d+)(?:px|em|rem)$/;
-            const viewport: any = {};
-            for (const key of ['mobile', 'tablet'] as const) {
-                let value = options.viewport.value[key];
-                const variableId = options.viewport.variableIds?.[key];
-                if (variableId) {
-                    const variable = await figma.variables.getVariableByIdAsync(variableId);
-                    const resolved = variable ? await resolveVariableValue(variable) : undefined;
-                    value = typeof resolved === 'number' ? `${resolved}px` : '';
-                }
-                if (viewportPattern.test(value)) viewport[key] = value;
-            }
-            if (Object.keys(viewport).length > 0) {
-                theme.settings.viewport = viewport;
-            }
+        if (Object.keys(viewport).length > 0) {
+            theme.settings.viewport = viewport;
         }
     }
 
@@ -686,9 +956,16 @@ async function exportThemeJson(t: Messages, options?: ExportOptions) {
         theme.settings.typography.fluid = true;
     }
 
+    // Leave out setting groups that ended up empty (e.g. "spacing": {} for presets without spacing presets)
+    for (const key of ['color', 'typography', 'spacing']) {
+        if (Object.keys(theme.settings[key]).length === 0) {
+            delete theme.settings[key];
+        }
+    }
+
     // Style variations (styles/*.json) from the extra modes of "Theme Colors" collections
     const variations: { fileName: string; json: any }[] = [];
-    if (options?.styleVariations) {
+    if (can('styleVariations') && options?.styleVariations) {
         const modeNames: string[] = [];
         for (const collection of collections.filter(c => c.name.startsWith('Theme Colors'))) {
             for (const mode of collection.modes.slice(1)) {
@@ -788,7 +1065,6 @@ async function getFluidRange(style: TextStyle): Promise<{ min: number; max: numb
 
 // Default theme.json templates for each (schemaVersion, wpVersion) pair
 function getDefaultTemplate(schemaVersion: number, wpVersion: string) {
-    const isWp7Plus = wpAtLeast(wpVersion, '7.0');
     const baseColors = [
         { name: 'Base', slug: 'base', color: '#FFFFFF' },
         { name: 'Contrast', slug: 'contrast', color: '#111111' },
@@ -851,12 +1127,22 @@ function getDefaultTemplate(schemaVersion: number, wpVersion: string) {
         'xx-large': 26,
     };
 
-    // Shared by every schema version (layout / fontFamilies exist since v1)
+    const baseTextShadows = [
+        { name: 'Light', slug: 'light', textShadow: '1px 1px 2px rgba(0, 0, 0, 0.3)' },
+        { name: 'Strong', slug: 'strong', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)' },
+    ];
+
+    // Shared by every schema version. Items are created only when the WordPress version's schema has the setting,
+    // so that exporting with the same preset writes them all back
     const common = {
         layout: baseLayout,
-        fontFamilies: baseFontFamilies,
-        radius: wpAtLeast(wpVersion, '6.9') ? baseRadius : [],
-        viewport: wpAtLeast(wpVersion, '7.1') ? baseViewport : [],
+        fontFamilies: supports(wpVersion, 'fontFamilies') ? baseFontFamilies : [],
+        fluidMin: supports(wpVersion, 'fluid') ? fluidFontSizes : {} as Record<string, number>,
+        spacing: supports(wpVersion, 'spacingSizes') ? baseSpacing : [],
+        dimensions: supports(wpVersion, 'dimensionSizes') ? baseDimensions : [],
+        radius: supports(wpVersion, 'radiusSizes') ? baseRadius : [],
+        viewport: supports(wpVersion, 'viewport') ? baseViewport : [],
+        textShadows: supports(wpVersion, 'textShadowPresets') ? baseTextShadows : [],
     };
 
     const v3Colors = [
@@ -877,9 +1163,6 @@ function getDefaultTemplate(schemaVersion: number, wpVersion: string) {
                 { name: 'Primary', slug: 'primary', shadow: 'Primary', highlight: 'Base' },
             ],
             fontSizes: baseFontSizes.slice(0, 3),
-            fluidMin: {} as Record<string, number>,
-            spacing: [],
-            dimensions: [],
             ...common,
         };
     } else if (schemaVersion === 2) {
@@ -890,9 +1173,6 @@ function getDefaultTemplate(schemaVersion: number, wpVersion: string) {
                 { name: 'Primary', slug: 'primary', shadow: 'Primary', highlight: 'Base' },
             ],
             fontSizes: baseFontSizes,
-            fluidMin: {} as Record<string, number>,
-            spacing: baseSpacing.slice(0, 5),
-            dimensions: [],
             ...common,
         };
     } else {
@@ -903,9 +1183,6 @@ function getDefaultTemplate(schemaVersion: number, wpVersion: string) {
                 { name: 'Accent', slug: 'accent', shadow: 'Accent 3', highlight: 'Accent 1' },
             ],
             fontSizes: baseFontSizes,
-            fluidMin: fluidFontSizes,
-            spacing: baseSpacing,
-            dimensions: isWp7Plus ? baseDimensions : [],
             ...common,
         };
     }
@@ -961,7 +1238,7 @@ async function generateThemeJson(schemaVersion: number, wpVersion: string, t: Me
     }
     const createdDuotone = (await upsertVariables(`Theme Duotone (${suffix})`, 'COLOR', duotoneItems)) / 2;
 
-    // 2. Create Spacing Variables (Version 2+)
+    // 2. Create Spacing Variables (WordPress 6.1+)
     if (template.spacing.length > 0) {
         const spacingCollectionName = `Theme Spacing (${suffix})`;
         let spacingCollection = collections.find(c => c.name === spacingCollectionName);
@@ -989,7 +1266,7 @@ async function generateThemeJson(schemaVersion: number, wpVersion: string, t: Me
         }
     }
 
-    // 3. Create Dimension Variables (Version 4: WordPress 7.0+)
+    // 3. Create Dimension Variables (WordPress 7.0+)
     if (template.dimensions.length > 0) {
         const dimensionCollectionName = `Theme Dimensions (${suffix})`;
         let dimensionCollection = collections.find(c => c.name === dimensionCollectionName);
@@ -1018,7 +1295,9 @@ async function generateThemeJson(schemaVersion: number, wpVersion: string, t: Me
 
     // 4. Create Layout / Font Family / Radius / Viewport Variables
     const createdLayout = await upsertVariables(`Theme Layout (${suffix})`, 'FLOAT', template.layout);
-    const createdFontFamilies = await upsertVariables(`Theme Font Families (${suffix})`, 'STRING', template.fontFamilies);
+    const createdFontFamilies = template.fontFamilies.length > 0
+        ? await upsertVariables(`Theme Font Families (${suffix})`, 'STRING', template.fontFamilies)
+        : 0;
     const createdRadius = template.radius.length > 0
         ? await upsertVariables(`Theme Radius (${suffix})`, 'FLOAT', template.radius)
         : 0;
@@ -1053,18 +1332,24 @@ async function generateThemeJson(schemaVersion: number, wpVersion: string, t: Me
         }
     }
 
+    // 6. Create Text Shadow Effect Styles (WordPress 7.2+)
+    const createdTextShadows = template.textShadows.length > 0
+        ? (await upsertTextShadowStyles(template.textShadows)).created
+        : 0;
+
     const message = t.generated({
         colors: createdColors,
         duotone: createdDuotone,
         fontSizes: createdFontSizes,
         fluidBound,
         fluidUnavailable,
-        fontFamilies: createdFontFamilies,
-        spacing: createdSpacing,
+        fontFamilies: template.fontFamilies.length > 0 ? createdFontFamilies : undefined,
+        spacing: template.spacing.length > 0 ? createdSpacing : undefined,
         dimensions: template.dimensions.length > 0 ? createdDimensions : undefined,
         layout: createdLayout,
         radius: template.radius.length > 0 ? createdRadius : undefined,
         viewport: template.viewport.length > 0 ? createdViewport : undefined,
+        textShadows: template.textShadows.length > 0 ? createdTextShadows : undefined,
     });
     figma.notify(message);
     return message;

@@ -3,20 +3,21 @@ WP theme-json Converter bridges the gap between WordPress and Figma, making it e
 ## Features
 
 ### Import
-Upload (or drag and drop) a WordPress theme.json file to automatically create Figma variables and text styles. Colors, duotone, spacing, dimensions, layout widths, font families, border radius and viewport become variables, and font sizes become text styles (fluid sizes are bound to Desktop / Mobile variables).
+Upload (or drag and drop) a WordPress theme.json file to automatically create Figma variables and text styles. Colors, duotone, spacing, dimensions, layout widths, font families, border radius and viewport become variables, and font sizes become text styles (fluid sizes are bound to Desktop / Mobile variables). Text shadow presets become effect styles.
 
 ### Export
 Generate a theme.json file from your existing Figma variables and styles. Perfect for transferring your design system to WordPress block themes.
 Each setting (appearanceTools, defaultPalette, textIndent, viewport, etc.) can be included or excluded, and its value chosen, individually.
+Only the settings that the selected WordPress version's schema has are shown and exported.
 Extra modes of your "Theme Colors" collection (e.g. Dark) are exported as style variations (styles/*.json) in a zip.
 
 ### Generate
 Create a starter set of variables and styles based on theme.json schema versions:
 - Version 1 (WordPress 5.8+): Basic colors and font sizes
-- Version 2 (WordPress 5.9+): Colors, font sizes, and spacing
+- Version 2 (WordPress 5.9+): Colors, font sizes, and font families
 - Version 3 (WordPress 6.6+): Full-featured with accent colors, spacing, and typography
-- Version 3 (WordPress 7.0+ / 7.1+): Adds border radius and dimension sizes, plus viewport breakpoints on 7.1+
-- Every version also creates font families, layout widths (contentSize / wideSize) and duotone pairs referencing the palette
+- Version 3 (WordPress 7.0+ / 7.1+ / 7.2+): Adds border radius and dimension sizes, viewport breakpoints on 7.1+, and text shadows on 7.2+
+- Every version also creates layout widths (contentSize / wideSize) and duotone pairs referencing the palette
 - Version 3 also creates fluid font sizes (Desktop / Mobile modes)
 
 ### Language
@@ -34,6 +35,7 @@ The plugin UI is available in English and Japanese. Switch it from the header; y
 - Duotone: "<name>/shadow" and "<name>/highlight" color variables in collections named "Theme Duotone"
 - Fluid Font Sizes: Text style font sizes bound to "Theme Font Sizes" variables with Desktop / Mobile modes
 - Style Variations: Extra modes of "Theme Colors" are exported as styles/*.json
+- Text Shadows: Effect styles (drop shadows) under "Text Shadow/" (WordPress 7.2+). The original CSS value is kept in the description
 
 ## Use Cases
 - Design WordPress block themes in Figma with accurate design tokens
@@ -41,6 +43,21 @@ The plugin UI is available in English and Japanese. Switch it from the header; y
 - Quickly bootstrap a new theme design with default WordPress presets
 
 ## Changelog
+
+### v1.6.0 (2026-11-20)
+- WordPress 7.2 support (theme.json stays at version 3, with the `$schema` for WordPress 7.2)
+    - Added the "Version 3 (WordPress 7.2+)" preset (now the default)
+    - Text shadows `settings.typography.textShadowPresets` ⇔ effect styles `Text Shadow/<name>` (drop shadows; generate, import, export)
+    - The original CSS (`em` units, palette references `var(--wp--preset--color--*)`) is kept in the style description and written back as is while the shadows are unchanged. Palette colors are bound to the `Theme Colors` variables
+    - `em` / `rem` are converted with 1em = 16px. Unsupported values such as `color-mix()` are skipped and listed in the notification
+    - Export: added `settings.typography.textShadow`, `settings.typography.defaultTextShadowPresets` and `settings.background.backgroundClip` (`true` / `false`, or any of `text` / `padding-box` / `border-box` / `content-box`), only when WordPress 7.2+ is selected
+- Export: `textIndent` can now be set to `false`
+- Fixes
+    - Version 1 / 2 no longer export settings their own schema does not have
+    - Version 1 (5.8): no `defaultPalette` / `defaultGradients` / `defaultDuotone` / `defaultFontSizes` / `fontFamilies` / fluid font sizes / style variations
+    - Version 2 (5.9): no `defaultDuotone` / `defaultFontSizes` / `defaultSpacingSizes` / `spacingSizes` / fluid font sizes / style variations
+    - The export options and the generated items follow the same rules (Version 1 creates no font families, Version 1 / 2 create no spacing)
+    - `appearanceTools` is still exported for Version 2: WordPress 5.9 supports it, although the 5.9 schema flags it by mistake
 
 ### v1.5.0 (2026-10-14)
 - English language support (plugin UI and notifications)

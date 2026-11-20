@@ -18,12 +18,13 @@ interface GenerateCounts {
     fontSizes: number;
     fluidBound: number;
     fluidUnavailable: boolean;
-    fontFamilies: number;
-    spacing: number;
+    fontFamilies?: number;
+    spacing?: number;
     dimensions?: number;
     layout: number;
     radius?: number;
     viewport?: number;
+    textShadows?: number;
 }
 
 const ja = {
@@ -47,6 +48,7 @@ const ja = {
     exportDescription: 'Figmaの現在のバリアブルとスタイルからtheme.jsonを生成してダウンロードします。',
     versionLabel: 'theme.jsonバージョン:',
     optionsTitle: '設定オプション:',
+    noOptions: 'このバージョンで選べる設定はありません。',
     groupColor: 'Color設定:',
     groupTypography: 'Typography設定:',
     groupSpacing: 'Spacing設定:',
@@ -58,6 +60,7 @@ const ja = {
     groupStyleVariations: 'スタイルバリエーション:',
     includeOption: (key: string) => `${key} を出力`,
     freeInput: '自由入力',
+    chooseValues: '値を選択',
     styleVariationsLabel: 'Theme Colors の2つ目以降のモードを styles/*.json として出力',
     styleVariationsHint: 'バリエーションがある場合は theme.json と合わせて zip でダウンロードします。',
     downloadButton: 'theme.json をダウンロード',
@@ -80,6 +83,7 @@ const ja = {
     generateItemRadius: '角丸（バリアブル）',
     generateItemDimensions: 'ディメンション（バリアブル）',
     generateItemViewport: 'ビューポート mobile / tablet（バリアブル）',
+    generateItemTextShadow: 'テキストシャドウ（エフェクトスタイル）',
     generateButton: 'Figmaにスタイルを生成',
     generating: (preset: string) => `${preset} でスタイルを生成中...`,
 
@@ -92,6 +96,9 @@ const ja = {
         : 'フォントサイズをインポートしました。',
     importedSizes: (presetType: 'spacing' | 'dimension', imported: number, total: number) =>
         `${presetType === 'spacing' ? 'スペーシング' : 'ディメンション'} ${total}件中 ${imported}件をインポートしました。`,
+    importedTextShadows: (imported: number, skipped: string[]) =>
+        `テキストシャドウ ${imported}件をエフェクトスタイルにインポートしました。`
+        + (skipped.length > 0 ? `対応していない値の ${skipped.length}件をスキップ: ${skipped.join(', ')}` : ''),
     importDone: 'インポート完了！',
     importFailed: (error: string) => `エラー: インポートに失敗しました（${error}）`,
     exported: (preset: string, variations: number) => variations > 0
@@ -100,11 +107,14 @@ const ja = {
     exportFailed: (error: string) => `エラー: エクスポートに失敗しました（${error}）`,
     generated: (c: GenerateCounts) => {
         const fluid = c.fluidBound > 0 ? `（可変サイズ: ${c.fluidBound}個）` : (c.fluidUnavailable ? '（可変サイズはモードが使えないためスキップ）' : '');
-        return `生成完了！ カラー: ${c.colors}個, デュオトーン: ${c.duotone}組, フォント: ${c.fontSizes}個${fluid}, フォントファミリー: ${c.fontFamilies}個, スペーシング: ${c.spacing}個`
+        return `生成完了！ カラー: ${c.colors}個, デュオトーン: ${c.duotone}組, フォント: ${c.fontSizes}個${fluid}`
+            + (c.fontFamilies !== undefined ? `, フォントファミリー: ${c.fontFamilies}個` : '')
+            + (c.spacing !== undefined ? `, スペーシング: ${c.spacing}個` : '')
             + (c.dimensions !== undefined ? `, ディメンション: ${c.dimensions}個` : '')
             + `, レイアウト: ${c.layout}個`
             + (c.radius !== undefined ? `, 角丸: ${c.radius}個` : '')
-            + (c.viewport !== undefined ? `, ビューポート: ${c.viewport}個` : '');
+            + (c.viewport !== undefined ? `, ビューポート: ${c.viewport}個` : '')
+            + (c.textShadows !== undefined ? `, テキストシャドウ: ${c.textShadows}個` : '');
     },
     generateFailed: (error: string) => `エラー: 生成に失敗しました（${error}）`,
 };
@@ -132,6 +142,7 @@ const en: Messages = {
     exportDescription: 'Generate a theme.json from the current Figma variables and styles, and download it.',
     versionLabel: 'theme.json version:',
     optionsTitle: 'Options:',
+    noOptions: 'There are no options for this version.',
     groupColor: 'Color:',
     groupTypography: 'Typography:',
     groupSpacing: 'Spacing:',
@@ -143,6 +154,7 @@ const en: Messages = {
     groupStyleVariations: 'Style Variations:',
     includeOption: (key: string) => `Include ${key}`,
     freeInput: 'Custom value',
+    chooseValues: 'Choose values',
     styleVariationsLabel: 'Export additional Theme Colors modes as styles/*.json',
     styleVariationsHint: 'When there are variations, they are downloaded as a zip together with theme.json.',
     downloadButton: 'Download theme.json',
@@ -165,6 +177,7 @@ const en: Messages = {
     generateItemRadius: 'Border radius (variables)',
     generateItemDimensions: 'Dimensions (variables)',
     generateItemViewport: 'Viewport mobile / tablet (variables)',
+    generateItemTextShadow: 'Text shadows (effect styles)',
     generateButton: 'Generate styles in Figma',
     generating: (preset: string) => `Generating styles for ${preset}...`,
 
@@ -177,6 +190,9 @@ const en: Messages = {
         : 'Imported typography sizes.',
     importedSizes: (presetType: 'spacing' | 'dimension', imported: number, total: number) =>
         `Imported ${imported} of ${total} ${presetType} sizes.`,
+    importedTextShadows: (imported: number, skipped: string[]) =>
+        `Imported ${imported} text shadows as effect styles.`
+        + (skipped.length > 0 ? ` Skipped ${skipped.length} with unsupported values: ${skipped.join(', ')}` : ''),
     importDone: 'Import complete!',
     importFailed: (error: string) => `Error: Import failed (${error})`,
     exported: (preset: string, variations: number) => variations > 0
@@ -185,11 +201,14 @@ const en: Messages = {
     exportFailed: (error: string) => `Error: Export failed (${error})`,
     generated: (c: GenerateCounts) => {
         const fluid = c.fluidBound > 0 ? ` (fluid: ${c.fluidBound})` : (c.fluidUnavailable ? ' (fluid sizes skipped: variable modes are not available)' : '');
-        return `Done! Colors: ${c.colors}, Duotone pairs: ${c.duotone}, Font sizes: ${c.fontSizes}${fluid}, Font families: ${c.fontFamilies}, Spacing: ${c.spacing}`
+        return `Done! Colors: ${c.colors}, Duotone pairs: ${c.duotone}, Font sizes: ${c.fontSizes}${fluid}`
+            + (c.fontFamilies !== undefined ? `, Font families: ${c.fontFamilies}` : '')
+            + (c.spacing !== undefined ? `, Spacing: ${c.spacing}` : '')
             + (c.dimensions !== undefined ? `, Dimensions: ${c.dimensions}` : '')
             + `, Layout: ${c.layout}`
             + (c.radius !== undefined ? `, Radius: ${c.radius}` : '')
-            + (c.viewport !== undefined ? `, Viewport: ${c.viewport}` : '');
+            + (c.viewport !== undefined ? `, Viewport: ${c.viewport}` : '')
+            + (c.textShadows !== undefined ? `, Text shadows: ${c.textShadows}` : '');
     },
     generateFailed: (error: string) => `Error: Generation failed (${error})`,
 };

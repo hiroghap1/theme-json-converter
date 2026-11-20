@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ThemeJson } from '../common/types';
 import { detectLang, isLang, Lang, LANGS, MESSAGES } from '../common/i18n';
+import { BACKGROUND_CLIP_VALUES, BackgroundClipValue, Feature, supports } from '../common/features';
 import { createZip } from './zip';
 
 // SVG Icons
@@ -55,11 +56,14 @@ interface ExportOptions {
     defaultDuotone: OptionSetting;
     defaultFontSizes: OptionSetting;
     defaultSpacingSizes: OptionSetting;
-    textIndent: OptionSetting<'subsequent' | 'all'>;
+    textIndent: OptionSetting<TextIndentValue>;
+    textShadow: OptionSetting;
+    defaultTextShadowPresets: OptionSetting;
     width: OptionSetting;
     height: OptionSetting;
     minWidth: OptionSetting;
     backgroundGradient: OptionSetting;
+    backgroundClip: OptionSetting<boolean | BackgroundClipValue[]>;  // true / false, or the allowed CSS values
     blockVisibilityAllowEditing: OptionSetting;
     viewport: ViewportOption;
     styleVariations: boolean;  // Theme Colors の2つ目以降のモードを styles/*.json として出力
@@ -78,7 +82,24 @@ interface ViewportVariable {
     value: number;
 }
 
-type BooleanOptionKey = 'appearanceTools' | 'defaultPalette' | 'defaultGradients' | 'defaultDuotone' | 'defaultFontSizes' | 'defaultSpacingSizes' | 'width' | 'height' | 'minWidth' | 'backgroundGradient' | 'blockVisibilityAllowEditing';
+type BooleanOptionKey = 'appearanceTools' | 'defaultPalette' | 'defaultGradients' | 'defaultDuotone' | 'defaultFontSizes' | 'defaultSpacingSizes' | 'textShadow' | 'defaultTextShadowPresets' | 'width' | 'height' | 'minWidth' | 'backgroundGradient' | 'blockVisibilityAllowEditing';
+
+// Setting path shown in "Include <key>" when it differs from the option name
+const OPTION_LABELS: Partial<Record<BooleanOptionKey, string>> = {
+    backgroundGradient: 'background.gradient',
+    blockVisibilityAllowEditing: 'blockVisibility.allowEditing',
+};
+
+// Settings that have an export option (the rest of src/common/features.ts are preset lists)
+const EXPORT_OPTION_FEATURES: Feature[] = [
+    'appearanceTools', 'defaultPalette', 'defaultGradients', 'defaultDuotone', 'defaultFontSizes', 'defaultSpacingSizes',
+    'textIndent', 'textShadow', 'defaultTextShadowPresets', 'width', 'height', 'minWidth', 'backgroundGradient',
+    'backgroundClip', 'blockVisibilityAllowEditing', 'viewport', 'styleVariations',
+];
+
+// settings.typography.textIndent values (WordPress 7.0+)
+const TEXT_INDENT_VALUES = ['subsequent', 'all', false] as const;
+type TextIndentValue = typeof TEXT_INDENT_VALUES[number];
 
 // Schema/WP version presets. Add new rows when a new WP release ships changes.
 const PRESETS: { key: string; label: string; schemaVersion: number; wpVersion: string }[] = [
@@ -87,6 +108,7 @@ const PRESETS: { key: string; label: string; schemaVersion: number; wpVersion: s
     { key: '3-6.6', label: 'Version 3 (WordPress 6.6+)', schemaVersion: 3, wpVersion: '6.6' },
     { key: '3-7.0', label: 'Version 3 (WordPress 7.0+)', schemaVersion: 3, wpVersion: '7.0' },
     { key: '3-7.1', label: 'Version 3 (WordPress 7.1+)', schemaVersion: 3, wpVersion: '7.1' },
+    { key: '3-7.2', label: 'Version 3 (WordPress 7.2+)', schemaVersion: 3, wpVersion: '7.2' },
 ];
 
 // Default to the latest preset (last row), so a newly added WP release becomes the default automatically
@@ -97,19 +119,6 @@ const getPreset = (key: string) =>
 
 // settings.viewport.mobile / tablet pattern (WordPress 7.1+)
 const VIEWPORT_PATTERN = /^(?:\d+|\d*\.\d+)(?:px|em|rem)$/;
-
-const wpAtLeast = (wpVersion: string, minVersion: string): boolean => {
-    const parse = (s: string) => s.split('.').map(n => parseInt(n, 10) || 0);
-    const a = parse(wpVersion);
-    const b = parse(minVersion);
-    const len = Math.max(a.length, b.length);
-    for (let i = 0; i < len; i++) {
-        const ai = a[i] ?? 0;
-        const bi = b[i] ?? 0;
-        if (ai !== bi) return ai > bi;
-    }
-    return true;
-};
 
 const App: React.FC = () => {
     // Until the saved choice arrives from the plugin code, follow the browser / app language
@@ -133,10 +142,13 @@ const App: React.FC = () => {
         defaultFontSizes: { include: true, value: false },
         defaultSpacingSizes: { include: true, value: false },
         textIndent: { include: true, value: 'subsequent' },
+        textShadow: { include: true, value: true },
+        defaultTextShadowPresets: { include: true, value: false },
         width: { include: true, value: false },
         height: { include: true, value: false },
         minWidth: { include: true, value: false },
         backgroundGradient: { include: true, value: false },
+        backgroundClip: { include: true, value: false },
         blockVisibilityAllowEditing: { include: true, value: true },
         viewport: {
             include: true,
@@ -151,6 +163,9 @@ const App: React.FC = () => {
 
     const exportPreset = getPreset(exportOptions.presetKey);
     const generatePreset = getPreset(generatePresetKey);
+    // Options / generated items are shown only when the selected WordPress version's schema has them
+    const canExport = (feature: Feature) => supports(exportPreset.wpVersion, feature);
+    const canGenerate = (feature: Feature) => supports(generatePreset.wpVersion, feature);
 
     const importFile = (file: File) => {
         const reader = new FileReader();
@@ -287,11 +302,27 @@ const App: React.FC = () => {
         }));
     };
 
-    const handleTextIndentChange = (field: 'include' | 'value', value: boolean | 'subsequent' | 'all') => {
+    const handleTextIndentChange = (field: 'include' | 'value', value: boolean | TextIndentValue) => {
         setExportOptions(prev => ({
             ...prev,
-            textIndent: { ...prev.textIndent, [field]: value } as OptionSetting<'subsequent' | 'all'>
+            textIndent: { ...prev.textIndent, [field]: value } as OptionSetting<TextIndentValue>
         }));
+    };
+
+    const handleBackgroundClipChange = (field: 'include' | 'value', value: boolean | BackgroundClipValue[]) => {
+        setExportOptions(prev => ({
+            ...prev,
+            backgroundClip: { ...prev.backgroundClip, [field]: value } as ExportOptions['backgroundClip']
+        }));
+    };
+
+    // Check / uncheck one backgroundClip value, keeping the schema order
+    const handleBackgroundClipValueToggle = (clip: BackgroundClipValue, checked: boolean) => {
+        setExportOptions(prev => {
+            const current = Array.isArray(prev.backgroundClip.value) ? prev.backgroundClip.value : [];
+            const next = BACKGROUND_CLIP_VALUES.filter(v => (v === clip ? checked : current.indexOf(v) !== -1));
+            return { ...prev, backgroundClip: { ...prev.backgroundClip, value: next } };
+        });
     };
 
     const handleViewportChange = (field: 'include' | 'mobile' | 'tablet', value: boolean | string) => {
@@ -321,6 +352,50 @@ const App: React.FC = () => {
             },
         }, '*');
         setStatus(t.generating(label));
+    };
+
+    // "Include <key>" checkbox with a true / false choice
+    const renderBooleanOption = (key: BooleanOptionKey) => (
+        <div key={key} style={styles.optionRow}>
+            <label style={styles.checkboxLabel}>
+                <input
+                    type="checkbox"
+                    checked={exportOptions[key].include}
+                    onChange={(e) => handleOptionSettingChange(key, 'include', e.target.checked)}
+                    style={styles.checkbox}
+                />
+                {t.includeOption(OPTION_LABELS[key] ?? key)}
+            </label>
+            {exportOptions[key].include && (
+                <div style={styles.valueSelector}>
+                    {[true, false].map(value => (
+                        <label key={String(value)} style={styles.radioLabel}>
+                            <input
+                                type="radio"
+                                name={`${key}Value`}
+                                checked={exportOptions[key].value === value}
+                                onChange={() => handleOptionSettingChange(key, 'value', value)}
+                                style={styles.radio}
+                            />
+                            {String(value)}
+                        </label>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+
+    // Group title and its boolean options, leaving out the options the selected version does not have
+    // (and the title when none is left)
+    const renderBooleanGroup = (title: string, keys: BooleanOptionKey[]) => {
+        const shown = keys.filter(key => canExport(key));
+        if (shown.length === 0) return null;
+        return (
+            <>
+                <p style={styles.optionGroupTitle}>{title}</p>
+                {shown.map(key => renderBooleanOption(key))}
+            </>
+        );
     };
 
     const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
@@ -424,233 +499,17 @@ const App: React.FC = () => {
 
                         <div style={styles.optionsSection}>
                             <p style={styles.optionsSectionTitle}>{t.optionsTitle}</p>
-                            
-                            <div style={styles.optionRow}>
-                                <label style={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={exportOptions.appearanceTools.include}
-                                        onChange={(e) => handleOptionSettingChange('appearanceTools', 'include', e.target.checked)}
-                                        style={styles.checkbox}
-                                    />
-                                    {t.includeOption('appearanceTools')}
-                                </label>
-                                {exportOptions.appearanceTools.include && (
-                                    <div style={styles.valueSelector}>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="appearanceToolsValue"
-                                                checked={exportOptions.appearanceTools.value === true}
-                                                onChange={() => handleOptionSettingChange('appearanceTools', 'value', true)}
-                                                style={styles.radio}
-                                            />
-                                            true
-                                        </label>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="appearanceToolsValue"
-                                                checked={exportOptions.appearanceTools.value === false}
-                                                onChange={() => handleOptionSettingChange('appearanceTools', 'value', false)}
-                                                style={styles.radio}
-                                            />
-                                            false
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            <p style={styles.optionGroupTitle}>{t.groupColor}</p>
-                            
-                            <div style={styles.optionRow}>
-                                <label style={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={exportOptions.defaultPalette.include}
-                                        onChange={(e) => handleOptionSettingChange('defaultPalette', 'include', e.target.checked)}
-                                        style={styles.checkbox}
-                                    />
-                                    {t.includeOption('defaultPalette')}
-                                </label>
-                                {exportOptions.defaultPalette.include && (
-                                    <div style={styles.valueSelector}>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultPaletteValue"
-                                                checked={exportOptions.defaultPalette.value === true}
-                                                onChange={() => handleOptionSettingChange('defaultPalette', 'value', true)}
-                                                style={styles.radio}
-                                            />
-                                            true
-                                        </label>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultPaletteValue"
-                                                checked={exportOptions.defaultPalette.value === false}
-                                                onChange={() => handleOptionSettingChange('defaultPalette', 'value', false)}
-                                                style={styles.radio}
-                                            />
-                                            false
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={styles.optionRow}>
-                                <label style={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={exportOptions.defaultGradients.include}
-                                        onChange={(e) => handleOptionSettingChange('defaultGradients', 'include', e.target.checked)}
-                                        style={styles.checkbox}
-                                    />
-                                    {t.includeOption('defaultGradients')}
-                                </label>
-                                {exportOptions.defaultGradients.include && (
-                                    <div style={styles.valueSelector}>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultGradientsValue"
-                                                checked={exportOptions.defaultGradients.value === true}
-                                                onChange={() => handleOptionSettingChange('defaultGradients', 'value', true)}
-                                                style={styles.radio}
-                                            />
-                                            true
-                                        </label>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultGradientsValue"
-                                                checked={exportOptions.defaultGradients.value === false}
-                                                onChange={() => handleOptionSettingChange('defaultGradients', 'value', false)}
-                                                style={styles.radio}
-                                            />
-                                            false
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={styles.optionRow}>
-                                <label style={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={exportOptions.defaultDuotone.include}
-                                        onChange={(e) => handleOptionSettingChange('defaultDuotone', 'include', e.target.checked)}
-                                        style={styles.checkbox}
-                                    />
-                                    {t.includeOption('defaultDuotone')}
-                                </label>
-                                {exportOptions.defaultDuotone.include && (
-                                    <div style={styles.valueSelector}>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultDuotoneValue"
-                                                checked={exportOptions.defaultDuotone.value === true}
-                                                onChange={() => handleOptionSettingChange('defaultDuotone', 'value', true)}
-                                                style={styles.radio}
-                                            />
-                                            true
-                                        </label>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultDuotoneValue"
-                                                checked={exportOptions.defaultDuotone.value === false}
-                                                onChange={() => handleOptionSettingChange('defaultDuotone', 'value', false)}
-                                                style={styles.radio}
-                                            />
-                                            false
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            <p style={styles.optionGroupTitle}>{t.groupTypography}</p>
-                            
-                            <div style={styles.optionRow}>
-                                <label style={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={exportOptions.defaultFontSizes.include}
-                                        onChange={(e) => handleOptionSettingChange('defaultFontSizes', 'include', e.target.checked)}
-                                        style={styles.checkbox}
-                                    />
-                                    {t.includeOption('defaultFontSizes')}
-                                </label>
-                                {exportOptions.defaultFontSizes.include && (
-                                    <div style={styles.valueSelector}>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultFontSizesValue"
-                                                checked={exportOptions.defaultFontSizes.value === true}
-                                                onChange={() => handleOptionSettingChange('defaultFontSizes', 'value', true)}
-                                                style={styles.radio}
-                                            />
-                                            true
-                                        </label>
-                                        <label style={styles.radioLabel}>
-                                            <input
-                                                type="radio"
-                                                name="defaultFontSizesValue"
-                                                checked={exportOptions.defaultFontSizes.value === false}
-                                                onChange={() => handleOptionSettingChange('defaultFontSizes', 'value', false)}
-                                                style={styles.radio}
-                                            />
-                                            false
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            {exportPreset.schemaVersion >= 2 && (
-                                <>
-                                    <p style={styles.optionGroupTitle}>{t.groupSpacing}</p>
-                                    <div style={styles.optionRow}>
-                                        <label style={styles.checkboxLabel}>
-                                            <input
-                                                type="checkbox"
-                                                checked={exportOptions.defaultSpacingSizes.include}
-                                                onChange={(e) => handleOptionSettingChange('defaultSpacingSizes', 'include', e.target.checked)}
-                                                style={styles.checkbox}
-                                            />
-                                            {t.includeOption('defaultSpacingSizes')}
-                                        </label>
-                                        {exportOptions.defaultSpacingSizes.include && (
-                                            <div style={styles.valueSelector}>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="defaultSpacingSizesValue"
-                                                        checked={exportOptions.defaultSpacingSizes.value === true}
-                                                        onChange={() => handleOptionSettingChange('defaultSpacingSizes', 'value', true)}
-                                                        style={styles.radio}
-                                                    />
-                                                    true
-                                                </label>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="defaultSpacingSizesValue"
-                                                        checked={exportOptions.defaultSpacingSizes.value === false}
-                                                        onChange={() => handleOptionSettingChange('defaultSpacingSizes', 'value', false)}
-                                                        style={styles.radio}
-                                                    />
-                                                    false
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
+                            {!EXPORT_OPTION_FEATURES.some(canExport) && (
+                                <p style={{ ...styles.optionHint, margin: 0 }}>{t.noOptions}</p>
                             )}
 
-                            {wpAtLeast(exportPreset.wpVersion, '7.0') && (
+                            {canExport('appearanceTools') && renderBooleanOption('appearanceTools')}
+
+                            {renderBooleanGroup(t.groupColor, ['defaultPalette', 'defaultGradients', 'defaultDuotone'])}
+                            {renderBooleanGroup(t.groupTypography, ['defaultFontSizes'])}
+                            {renderBooleanGroup(t.groupSpacing, ['defaultSpacingSizes'])}
+
+                            {canExport('textIndent') && (
                                 <>
                                     <p style={styles.optionGroupTitle}>{t.groupTypographyExtra}</p>
                                     <div style={styles.optionRow}>
@@ -665,136 +524,84 @@ const App: React.FC = () => {
                                         </label>
                                         {exportOptions.textIndent.include && (
                                             <div style={styles.valueSelector}>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="textIndentValue"
-                                                        checked={exportOptions.textIndent.value === 'subsequent'}
-                                                        onChange={() => handleTextIndentChange('value', 'subsequent')}
-                                                        style={styles.radio}
-                                                    />
-                                                    subsequent
-                                                </label>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="textIndentValue"
-                                                        checked={exportOptions.textIndent.value === 'all'}
-                                                        onChange={() => handleTextIndentChange('value', 'all')}
-                                                        style={styles.radio}
-                                                    />
-                                                    all
-                                                </label>
+                                                {TEXT_INDENT_VALUES.map(value => (
+                                                    <label key={String(value)} style={styles.radioLabel}>
+                                                        <input
+                                                            type="radio"
+                                                            name="textIndentValue"
+                                                            checked={exportOptions.textIndent.value === value}
+                                                            onChange={() => handleTextIndentChange('value', value)}
+                                                            style={styles.radio}
+                                                        />
+                                                        {String(value)}
+                                                    </label>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
+                                    {canExport('textShadow') && renderBooleanOption('textShadow')}
+                                    {canExport('defaultTextShadowPresets') && renderBooleanOption('defaultTextShadowPresets')}
+                                </>
+                            )}
 
-                                    <p style={styles.optionGroupTitle}>{t.groupDimensions}</p>
-                                    <div style={styles.optionRow}>
-                                        <label style={styles.checkboxLabel}>
-                                            <input
-                                                type="checkbox"
-                                                checked={exportOptions.width.include}
-                                                onChange={(e) => handleOptionSettingChange('width', 'include', e.target.checked)}
-                                                style={styles.checkbox}
-                                            />
-                                            {t.includeOption('width')}
-                                        </label>
-                                        {exportOptions.width.include && (
-                                            <div style={styles.valueSelector}>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="widthValue"
-                                                        checked={exportOptions.width.value === true}
-                                                        onChange={() => handleOptionSettingChange('width', 'value', true)}
-                                                        style={styles.radio}
-                                                    />
-                                                    true
-                                                </label>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="widthValue"
-                                                        checked={exportOptions.width.value === false}
-                                                        onChange={() => handleOptionSettingChange('width', 'value', false)}
-                                                        style={styles.radio}
-                                                    />
-                                                    false
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
+                            {renderBooleanGroup(t.groupDimensions, ['width', 'height', 'minWidth'])}
 
-                                    <div style={styles.optionRow}>
-                                        <label style={styles.checkboxLabel}>
-                                            <input
-                                                type="checkbox"
-                                                checked={exportOptions.height.include}
-                                                onChange={(e) => handleOptionSettingChange('height', 'include', e.target.checked)}
-                                                style={styles.checkbox}
-                                            />
-                                            {t.includeOption('height')}
-                                        </label>
-                                        {exportOptions.height.include && (
-                                            <div style={styles.valueSelector}>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="heightValue"
-                                                        checked={exportOptions.height.value === true}
-                                                        onChange={() => handleOptionSettingChange('height', 'value', true)}
-                                                        style={styles.radio}
-                                                    />
-                                                    true
-                                                </label>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="heightValue"
-                                                        checked={exportOptions.height.value === false}
-                                                        onChange={() => handleOptionSettingChange('height', 'value', false)}
-                                                        style={styles.radio}
-                                                    />
-                                                    false
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {wpAtLeast(exportPreset.wpVersion, '7.1') && (
+                            {canExport('backgroundGradient') && (
+                                <>
+                                    <p style={styles.optionGroupTitle}>{t.groupBackground}</p>
+                                    {renderBooleanOption('backgroundGradient')}
+                                    {canExport('backgroundClip') && (
                                         <div style={styles.optionRow}>
                                             <label style={styles.checkboxLabel}>
                                                 <input
                                                     type="checkbox"
-                                                    checked={exportOptions.minWidth.include}
-                                                    onChange={(e) => handleOptionSettingChange('minWidth', 'include', e.target.checked)}
+                                                    checked={exportOptions.backgroundClip.include}
+                                                    onChange={(e) => handleBackgroundClipChange('include', e.target.checked)}
                                                     style={styles.checkbox}
                                                 />
-                                                {t.includeOption('minWidth')}
+                                                {t.includeOption('background.backgroundClip')}
                                             </label>
-                                            {exportOptions.minWidth.include && (
-                                                <div style={styles.valueSelector}>
-                                                    <label style={styles.radioLabel}>
-                                                        <input
-                                                            type="radio"
-                                                            name="minWidthValue"
-                                                            checked={exportOptions.minWidth.value === true}
-                                                            onChange={() => handleOptionSettingChange('minWidth', 'value', true)}
-                                                            style={styles.radio}
-                                                        />
-                                                        true
-                                                    </label>
-                                                    <label style={styles.radioLabel}>
-                                                        <input
-                                                            type="radio"
-                                                            name="minWidthValue"
-                                                            checked={exportOptions.minWidth.value === false}
-                                                            onChange={() => handleOptionSettingChange('minWidth', 'value', false)}
-                                                            style={styles.radio}
-                                                        />
-                                                        false
-                                                    </label>
+                                            {exportOptions.backgroundClip.include && (
+                                                <div style={{ ...styles.valueSelector, flexDirection: 'column', gap: '6px' }}>
+                                                    <div style={styles.valueRow}>
+                                                        {[true, false].map(value => (
+                                                            <label key={String(value)} style={styles.radioLabel}>
+                                                                <input
+                                                                    type="radio"
+                                                                    name="backgroundClipValue"
+                                                                    checked={exportOptions.backgroundClip.value === value}
+                                                                    onChange={() => handleBackgroundClipChange('value', value)}
+                                                                    style={styles.radio}
+                                                                />
+                                                                {String(value)}
+                                                            </label>
+                                                        ))}
+                                                        <label style={styles.radioLabel}>
+                                                            <input
+                                                                type="radio"
+                                                                name="backgroundClipValue"
+                                                                checked={Array.isArray(exportOptions.backgroundClip.value)}
+                                                                onChange={() => handleBackgroundClipChange('value', ['text'])}
+                                                                style={styles.radio}
+                                                            />
+                                                            {t.chooseValues}
+                                                        </label>
+                                                    </div>
+                                                    {Array.isArray(exportOptions.backgroundClip.value) && (
+                                                        <div style={styles.valueRow}>
+                                                            {BACKGROUND_CLIP_VALUES.map(clip => (
+                                                                <label key={clip} style={styles.radioLabel}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={(exportOptions.backgroundClip.value as BackgroundClipValue[]).indexOf(clip) !== -1}
+                                                                        onChange={(e) => handleBackgroundClipValueToggle(clip, e.target.checked)}
+                                                                        style={styles.radio}
+                                                                    />
+                                                                    {clip}
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -802,82 +609,10 @@ const App: React.FC = () => {
                                 </>
                             )}
 
-                            {wpAtLeast(exportPreset.wpVersion, '7.1') && (
+                            {renderBooleanGroup(t.groupBlockVisibility, ['blockVisibilityAllowEditing'])}
+
+                            {canExport('viewport') && (
                                 <>
-                                    <p style={styles.optionGroupTitle}>{t.groupBackground}</p>
-                                    <div style={styles.optionRow}>
-                                        <label style={styles.checkboxLabel}>
-                                            <input
-                                                type="checkbox"
-                                                checked={exportOptions.backgroundGradient.include}
-                                                onChange={(e) => handleOptionSettingChange('backgroundGradient', 'include', e.target.checked)}
-                                                style={styles.checkbox}
-                                            />
-                                            {t.includeOption('background.gradient')}
-                                        </label>
-                                        {exportOptions.backgroundGradient.include && (
-                                            <div style={styles.valueSelector}>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="backgroundGradientValue"
-                                                        checked={exportOptions.backgroundGradient.value === true}
-                                                        onChange={() => handleOptionSettingChange('backgroundGradient', 'value', true)}
-                                                        style={styles.radio}
-                                                    />
-                                                    true
-                                                </label>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="backgroundGradientValue"
-                                                        checked={exportOptions.backgroundGradient.value === false}
-                                                        onChange={() => handleOptionSettingChange('backgroundGradient', 'value', false)}
-                                                        style={styles.radio}
-                                                    />
-                                                    false
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <p style={styles.optionGroupTitle}>{t.groupBlockVisibility}</p>
-                                    <div style={styles.optionRow}>
-                                        <label style={styles.checkboxLabel}>
-                                            <input
-                                                type="checkbox"
-                                                checked={exportOptions.blockVisibilityAllowEditing.include}
-                                                onChange={(e) => handleOptionSettingChange('blockVisibilityAllowEditing', 'include', e.target.checked)}
-                                                style={styles.checkbox}
-                                            />
-                                            {t.includeOption('blockVisibility.allowEditing')}
-                                        </label>
-                                        {exportOptions.blockVisibilityAllowEditing.include && (
-                                            <div style={styles.valueSelector}>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="blockVisibilityAllowEditingValue"
-                                                        checked={exportOptions.blockVisibilityAllowEditing.value === true}
-                                                        onChange={() => handleOptionSettingChange('blockVisibilityAllowEditing', 'value', true)}
-                                                        style={styles.radio}
-                                                    />
-                                                    true
-                                                </label>
-                                                <label style={styles.radioLabel}>
-                                                    <input
-                                                        type="radio"
-                                                        name="blockVisibilityAllowEditingValue"
-                                                        checked={exportOptions.blockVisibilityAllowEditing.value === false}
-                                                        onChange={() => handleOptionSettingChange('blockVisibilityAllowEditing', 'value', false)}
-                                                        style={styles.radio}
-                                                    />
-                                                    false
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-
                                     <p style={styles.optionGroupTitle}>{t.groupViewport}</p>
                                     <div style={styles.optionRow}>
                                         <label style={styles.checkboxLabel}>
@@ -947,19 +682,23 @@ const App: React.FC = () => {
                                 </>
                             )}
 
-                            <p style={styles.optionGroupTitle}>{t.groupStyleVariations}</p>
-                            <div style={styles.optionRow}>
-                                <label style={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={exportOptions.styleVariations}
-                                        onChange={(e) => setExportOptions(prev => ({ ...prev, styleVariations: e.target.checked }))}
-                                        style={styles.checkbox}
-                                    />
-                                    {t.styleVariationsLabel}
-                                </label>
-                                <p style={styles.optionHint}>{t.styleVariationsHint}</p>
-                            </div>
+                            {canExport('styleVariations') && (
+                                <>
+                                    <p style={styles.optionGroupTitle}>{t.groupStyleVariations}</p>
+                                    <div style={styles.optionRow}>
+                                        <label style={styles.checkboxLabel}>
+                                            <input
+                                                type="checkbox"
+                                                checked={exportOptions.styleVariations}
+                                                onChange={(e) => setExportOptions(prev => ({ ...prev, styleVariations: e.target.checked }))}
+                                                style={styles.checkbox}
+                                            />
+                                            {t.styleVariationsLabel}
+                                        </label>
+                                        <p style={styles.optionHint}>{t.styleVariationsHint}</p>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <button style={styles.primaryButton} onClick={handleExport}>
@@ -993,13 +732,14 @@ const App: React.FC = () => {
                                 <li>{t.generateItemColors}</li>
                                 <li>{t.generateItemDuotone}</li>
                                 <li>{t.generateItemFontSizes}</li>
-                                {generatePreset.schemaVersion >= 3 && <li>{t.generateItemFluid}</li>}
-                                <li>{t.generateItemFontFamilies}</li>
-                                <li>{t.generateItemSpacing}</li>
+                                {canGenerate('fluid') && <li>{t.generateItemFluid}</li>}
+                                {canGenerate('fontFamilies') && <li>{t.generateItemFontFamilies}</li>}
+                                {canGenerate('spacingSizes') && <li>{t.generateItemSpacing}</li>}
                                 <li>{t.generateItemLayout}</li>
-                                {wpAtLeast(generatePreset.wpVersion, '6.9') && <li>{t.generateItemRadius}</li>}
-                                {wpAtLeast(generatePreset.wpVersion, '7.0') && <li>{t.generateItemDimensions}</li>}
-                                {wpAtLeast(generatePreset.wpVersion, '7.1') && <li>{t.generateItemViewport}</li>}
+                                {canGenerate('radiusSizes') && <li>{t.generateItemRadius}</li>}
+                                {canGenerate('dimensionSizes') && <li>{t.generateItemDimensions}</li>}
+                                {canGenerate('viewport') && <li>{t.generateItemViewport}</li>}
+                                {canGenerate('textShadowPresets') && <li>{t.generateItemTextShadow}</li>}
                             </ul>
                         </div>
                         <button style={styles.primaryButton} onClick={handleGenerate}>
@@ -1283,6 +1023,11 @@ const styles: { [key: string]: React.CSSProperties } = {
         border: '1px solid #d0d0d0',
         borderRadius: '4px',
         outline: 'none',
+    },
+    valueRow: {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '6px 16px',
     },
     optionHint: {
         margin: '0 0 0 24px',
