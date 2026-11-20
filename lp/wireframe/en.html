@@ -10,7 +10,7 @@
 
 <div class="toolbar" role="toolbar" aria-label="ワイヤー表示切替" lang="ja">
     <strong>LP ワイヤーフレーム（英語版）</strong>
-    <span class="meta">WP theme-json Converter ／ v0.2 ／ 2026-10-13</span>
+    <span class="meta">WP theme-json Converter ／ v0.3 ／ 2026-11-20</span>
     <span class="spacer"></span>
     <div class="seg" aria-label="言語">
         <a href="index.html" data-lang-link>日本語</a>
@@ -97,7 +97,7 @@
         <span class="tag">02 HERO</span>
         <div class="inner hero">
             <div>
-                <span class="chip">Figma plugin ｜ Supports WordPress 7.1</span>
+                <span class="chip">Figma plugin ｜ Supports WordPress 7.2</span>
                 <h1>theme.json ⇄ Figma,<br>in both directions.</h1>
                 <p>Turn the design tokens in your WordPress block theme into Figma variables — and turn your Figma design system back into theme.json. Import, export, and generate, so design and code never drift apart.</p>
                 <div class="ctas">
@@ -107,7 +107,7 @@
                 <div class="micro">Free ｜ Works in Figma design files</div>
                 <div class="chips">
                     <span class="chip">theme.json version 1–3</span>
-                    <span class="chip">WordPress 5.8–7.1</span>
+                    <span class="chip">WordPress 5.8–7.2</span>
                     <span class="chip">Dark mode → style variations</span>
                 </div>
             </div>
@@ -173,7 +173,7 @@
                 <div class="card">
                     <div class="ph round"><span>Illustration</span></div>
                     <h3>Keeping up with what each WordPress release adds</h3>
-                    <p>Border radius, dimensions, viewport — new settings keep coming.</p>
+                    <p>Border radius, viewport, text shadows — new settings keep coming.</p>
                 </div>
             </div>
             <p class="bridge">Automate the round trip with one plugin.</p>
@@ -192,7 +192,7 @@
                     <div class="mode-head"><span class="num">01</span><div class="ph icon"><span>icon</span></div></div>
                     <div class="dir">theme.json → Figma</div>
                     <h3>Import</h3>
-                    <p>Drop in a theme.json. Colors, spacing, fonts and more become variables; font sizes become text styles.</p>
+                    <p>Drop in a theme.json. Colors, spacing, fonts and more become variables; font sizes become text styles, and text shadows become effect styles.</p>
                     <span class="more">Learn more ↓</span>
                 </div>
                 <div class="card mode">
@@ -226,6 +226,7 @@
                         <li>Drag and drop to import</li>
                         <li>Colors, duotone, spacing, dimensions, layout widths, font families, border radius and viewport become variables</li>
                         <li>Fluid font sizes get Desktop / Mobile modes<small>Bound to each text style's font size</small></li>
+                        <li>Text shadows (WordPress 7.2) become effect styles<small>em units and palette colors are kept in the description and exported as is</small></li>
                         <li>Variables with the same name are updated; others are created</li>
                         <li>Slugs (e.g. <code>spacing--20</code>) are preserved</li>
                     </ul>
@@ -244,7 +245,7 @@
                         <li>Include or exclude each setting — appearanceTools, defaultPalette, textIndent, viewport and more — and set its value</li>
                         <li>Extra modes of Theme Colors (e.g. Dark) are exported as style variations, <code>styles/*.json</code>, in a zip</li>
                         <li>Original slugs are restored on export</li>
-                        <li><code>$schema</code> matches your target WordPress version</li>
+                        <li><code>$schema</code> and exported settings match your target WordPress version</li>
                     </ul>
                 </div>
                 <div class="media">
@@ -265,9 +266,9 @@
                     <h3>Pick a version,<br>get a starter set</h3>
                     <p>A foundation for new themes, with exactly the settings your WordPress version supports.</p>
                     <ul class="checks">
-                        <li>Color palette, duotone, font sizes, font families, spacing and layout widths</li>
-                        <li>Fluid font sizes (Desktop / Mobile) with version 3</li>
-                        <li>Border radius on WordPress 6.9+, dimensions on 7.0+, viewport on 7.1+</li>
+                        <li>Color palette, duotone, font sizes and layout widths</li>
+                        <li>Font families from version 2; spacing and fluid font sizes (Desktop / Mobile) from version 3</li>
+                        <li>Border radius on WordPress 6.9+, dimensions on 7.0+, viewport on 7.1+, text shadows on 7.2+</li>
                     </ul>
                 </div>
                 <div class="media">
@@ -302,13 +303,14 @@
                         <tr><td><code>settings.color.duotone</code></td><td>Theme Duotone<br><small>&lt;name&gt;/shadow · /highlight</small></td><td>Color variable (can reference the palette)</td><td>All</td></tr>
                         <tr><td><code>settings.typography.fontSizes</code></td><td>Under Typography/</td><td>Text style</td><td>All</td></tr>
                         <tr><td><code>fontSizes[].fluid</code></td><td>Theme Font Sizes<br><small>Desktop / Mobile modes</small></td><td>Number variable</td><td>Version 3+</td></tr>
-                        <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>String variable</td><td>All</td></tr>
-                        <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>Number variable</td><td>Version 2+</td></tr>
+                        <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>String variable</td><td>Version 2+</td></tr>
+                        <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>Number variable</td><td>Version 3+</td></tr>
                         <tr><td><code>settings.layout.contentSize</code> / <code>wideSize</code></td><td>Theme Layout</td><td>Number variable</td><td>All</td></tr>
                         <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>Number variable</td><td>WordPress 6.9+</td></tr>
                         <tr><td><code>settings.dimensions.dimensionSizes</code></td><td>Theme Dimensions</td><td>Number variable</td><td>WordPress 7.0+</td></tr>
                         <tr><td><code>settings.viewport</code></td><td>Theme Viewport<br><small>mobile / tablet</small></td><td>Number variable</td><td>WordPress 7.1+</td></tr>
-                        <tr><td><code>styles/&lt;mode&gt;.json</code></td><td>2nd+ modes of Theme Colors</td><td>Style variation</td><td>Export only</td></tr>
+                        <tr><td><code>settings.typography.textShadowPresets</code></td><td>Under Text Shadow/<br><small>Drop shadows</small></td><td>Effect style</td><td>WordPress 7.2+</td></tr>
+                        <tr><td><code>styles/&lt;mode&gt;.json</code></td><td>2nd+ modes of Theme Colors</td><td>Style variation</td><td>Export only<br><small>Version 3</small></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -321,7 +323,7 @@
         <span class="tag">07 VERSIONS</span>
         <div class="inner">
             <span class="eyebrow">COMPATIBILITY</span>
-            <h2 class="sec">From WordPress 5.8 to 7.1</h2>
+            <h2 class="sec">From WordPress 5.8 to 7.2</h2>
             <p class="lead">Supports theme.json versions 1–3. Export and generate only use the settings available in the version you choose.</p>
             <ol class="timeline">
                 <li>
@@ -334,13 +336,13 @@
                     <div class="dot"></div>
                     <div class="v">Version 2</div>
                     <div class="wp">WordPress 5.9+</div>
-                    <div class="adds">+ Spacing</div>
+                    <div class="adds">+ Font families</div>
                 </li>
                 <li>
                     <div class="dot"></div>
                     <div class="v">Version 3</div>
                     <div class="wp">WordPress 6.6+</div>
-                    <div class="adds">+ Accent colors, fluid font sizes</div>
+                    <div class="adds">+ Accent colors, spacing, fluid font sizes</div>
                 </li>
                 <li>
                     <div class="dot"></div>
@@ -348,11 +350,17 @@
                     <div class="wp">WordPress 7.0+</div>
                     <div class="adds">+ Border radius, dimensions, textIndent</div>
                 </li>
-                <li class="now">
+                <li>
                     <div class="dot"></div>
                     <div class="v">Version 3</div>
                     <div class="wp">WordPress 7.1+</div>
                     <div class="adds">+ Viewport and more</div>
+                </li>
+                <li class="now">
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 7.2+</div>
+                    <div class="adds">+ Text shadows, backgroundClip</div>
                     <span class="chip">Latest · default</span>
                 </li>
             </ol>
@@ -448,11 +456,11 @@
                 </details>
                 <details>
                     <summary>Does it support dark mode?</summary>
-                    <div class="a">Extra modes in the Theme Colors collection (e.g. Dark) are exported as style variations, <code>styles/&lt;mode&gt;.json</code>, zipped together with theme.json.</div>
+                    <div class="a">Extra modes in the Theme Colors collection (e.g. Dark) are exported as style variations, <code>styles/&lt;mode&gt;.json</code>, zipped together with theme.json (when you choose Version 3).</div>
                 </details>
                 <details>
                     <summary>Which WordPress versions are supported?</summary>
-                    <div class="a">theme.json versions 1–3 (WordPress 5.8–7.1).</div>
+                    <div class="a">theme.json versions 1–3 (WordPress 5.8–7.2).</div>
                 </details>
                 <details>
                     <summary>Can it import font sizes set in vw or em?</summary>
@@ -478,6 +486,13 @@
             <h2 class="sec solo">Changelog</h2>
             <div class="log">
                 <div class="log-item">
+                    <div class="ver">v1.6.0<span class="date">2026-11-20</span></div>
+                    <ul>
+                        <li>Support for WordPress 7.2: text shadow presets ⇔ effect styles, plus textShadow and backgroundClip on export</li>
+                        <li>Version 1 / 2 no longer export settings their own schema does not have</li>
+                    </ul>
+                </div>
+                <div class="log-item">
                     <div class="ver">v1.5.0<span class="date">2026-10-14</span></div>
                     <ul><li>English language support for the plugin UI and notifications (switch in the header)</li></ul>
                 </div>
@@ -488,10 +503,6 @@
                         <li>Export style variations (styles/*.json) as a zip</li>
                         <li>Slug preservation, drag-and-drop import, and more</li>
                     </ul>
-                </div>
-                <div class="log-item">
-                    <div class="ver">v1.3.0<span class="date">2026-09-26</span></div>
-                    <ul><li>Support for WordPress 7.1</li></ul>
                 </div>
             </div>
             <div class="center"><a class="btn sm">Full changelog</a></div>

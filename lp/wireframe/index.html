@@ -10,7 +10,7 @@
 
 <div class="toolbar" role="toolbar" aria-label="ワイヤー表示切替">
     <strong>LP ワイヤーフレーム</strong>
-    <span class="meta">WP theme-json Converter ／ v0.2 ／ 2026-10-13</span>
+    <span class="meta">WP theme-json Converter ／ v0.3 ／ 2026-11-20</span>
     <span class="spacer"></span>
     <div class="seg" aria-label="言語">
         <a href="index.html" data-lang-link aria-current="page">日本語</a>
@@ -109,7 +109,7 @@
         <span class="tag">02 HERO</span>
         <div class="inner hero">
             <div>
-                <span class="chip">Figma プラグイン ｜ WordPress 7.1 対応</span>
+                <span class="chip">Figma プラグイン ｜ WordPress 7.2 対応</span>
                 <h1>theme.json と<br>Figma を、双方向に。</h1>
                 <p>WordPress ブロックテーマのデザイントークンを Figma のバリアブルへ。Figma で作ったデザインシステムを theme.json へ。インポート・エクスポート・生成の3つのモードで、デザインと実装のズレをなくします。</p>
                 <div class="ctas">
@@ -119,7 +119,7 @@
                 <div class="micro">無料 ｜ Figma のデザインファイルで動作します</div>
                 <div class="chips">
                     <span class="chip">theme.json version 1〜3</span>
-                    <span class="chip">WordPress 5.8〜7.1</span>
+                    <span class="chip">WordPress 5.8〜7.2</span>
                     <span class="chip">ダークモード → スタイルバリエーション</span>
                 </div>
             </div>
@@ -185,7 +185,7 @@
                 <div class="card">
                     <div class="ph round"><span>イラスト</span></div>
                     <h3>WordPress のバージョンごとの<br class="pc">設定差分を追いきれない</h3>
-                    <p>角丸・ディメンション・ビューポートなど、新しい設定が増え続ける。</p>
+                    <p>角丸・ビューポート・テキストシャドウなど、新しい設定が増え続ける。</p>
                 </div>
             </div>
             <p class="bridge">その往復、プラグインでまとめて自動化できます。</p>
@@ -215,7 +215,7 @@
                     <div class="mode-head"><span class="num">01</span><div class="ph icon"><span>icon</span></div></div>
                     <div class="dir">theme.json → Figma</div>
                     <h3>インポート</h3>
-                    <p>theme.json をドラッグ＆ドロップ。カラー・スペーシング・フォントなどはバリアブルに、フォントサイズはテキストスタイルになります。</p>
+                    <p>theme.json をドラッグ＆ドロップ。カラー・スペーシング・フォントなどはバリアブルに、フォントサイズはテキストスタイル、テキストシャドウはエフェクトスタイルになります。</p>
                     <span class="more">詳しく見る ↓</span>
                 </div>
                 <div class="card mode">
@@ -260,6 +260,7 @@
                         <li>ドラッグ＆ドロップで読み込み</li>
                         <li>カラー・デュオトーン・スペーシング・ディメンション・レイアウト幅・フォントファミリー・角丸・ビューポートをバリアブルに</li>
                         <li>可変フォントサイズ（fluid）は Desktop / Mobile の2モードに<small>テキストスタイルのフォントサイズにバインド</small></li>
+                        <li>テキストシャドウ（WordPress 7.2）はエフェクトスタイルに<small>em やパレット色の指定は説明欄に残し、エクスポートでそのまま戻す</small></li>
                         <li>同名のバリアブルは値を更新、なければ新規作成</li>
                         <li>スラッグ（例: <code>spacing--20</code>）を保持</li>
                     </ul>
@@ -278,7 +279,7 @@
                         <li>appearanceTools・defaultPalette・textIndent・viewport など、項目ごとに出力の有無と値を設定</li>
                         <li>Theme Colors の追加モード（Dark など）をスタイルバリエーション <code>styles/*.json</code> として zip 出力</li>
                         <li>インポート時のスラッグに戻して出力</li>
-                        <li>対象 WordPress バージョンに合わせた <code>$schema</code></li>
+                        <li>対象 WordPress バージョンに合わせた <code>$schema</code> と出力項目</li>
                     </ul>
                 </div>
                 <div class="media">
@@ -299,9 +300,9 @@
                     <h3>バージョンを選ぶだけで、<br>スターターセットを作成</h3>
                     <p>新しいテーマを始めるときの土台づくりに。WordPress のバージョンに合わせた項目を一式用意します。</p>
                     <ul class="checks">
-                        <li>カラーパレット・デュオトーン・フォントサイズ・フォントファミリー・スペーシング・レイアウト幅</li>
-                        <li>version 3 では可変フォントサイズ（Desktop / Mobile）も</li>
-                        <li>WordPress 6.9+ で角丸、7.0+ でディメンション、7.1+ でビューポートを追加</li>
+                        <li>カラーパレット・デュオトーン・フォントサイズ・レイアウト幅</li>
+                        <li>version 2 からフォントファミリー、version 3 からスペーシングと可変フォントサイズ（Desktop / Mobile）も</li>
+                        <li>WordPress 6.9+ で角丸、7.0+ でディメンション、7.1+ でビューポート、7.2+ でテキストシャドウを追加</li>
                     </ul>
                 </div>
                 <div class="media">
@@ -346,13 +347,14 @@
                         <tr><td><code>settings.color.duotone</code></td><td>Theme Duotone<br><small>&lt;名前&gt;/shadow ・ /highlight</small></td><td>カラーバリアブル（パレット参照可）</td><td>すべて</td></tr>
                         <tr><td><code>settings.typography.fontSizes</code></td><td>Typography/ 以下</td><td>テキストスタイル</td><td>すべて</td></tr>
                         <tr><td><code>fontSizes[].fluid</code></td><td>Theme Font Sizes<br><small>Desktop / Mobile モード</small></td><td>数値バリアブル</td><td>Version 3〜</td></tr>
-                        <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>文字列バリアブル</td><td>すべて</td></tr>
-                        <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>数値バリアブル</td><td>Version 2〜</td></tr>
+                        <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>文字列バリアブル</td><td>Version 2〜</td></tr>
+                        <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>数値バリアブル</td><td>Version 3〜</td></tr>
                         <tr><td><code>settings.layout.contentSize</code> / <code>wideSize</code></td><td>Theme Layout</td><td>数値バリアブル</td><td>すべて</td></tr>
                         <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>数値バリアブル</td><td>WordPress 6.9+</td></tr>
                         <tr><td><code>settings.dimensions.dimensionSizes</code></td><td>Theme Dimensions</td><td>数値バリアブル</td><td>WordPress 7.0+</td></tr>
                         <tr><td><code>settings.viewport</code></td><td>Theme Viewport<br><small>mobile / tablet</small></td><td>数値バリアブル</td><td>WordPress 7.1+</td></tr>
-                        <tr><td><code>styles/&lt;モード名&gt;.json</code></td><td>Theme Colors の2つ目以降のモード</td><td>スタイルバリエーション</td><td>エクスポートのみ</td></tr>
+                        <tr><td><code>settings.typography.textShadowPresets</code></td><td>Text Shadow/ 以下<br><small>ドロップシャドウ</small></td><td>エフェクトスタイル</td><td>WordPress 7.2+</td></tr>
+                        <tr><td><code>styles/&lt;モード名&gt;.json</code></td><td>Theme Colors の2つ目以降のモード</td><td>スタイルバリエーション</td><td>エクスポートのみ<br><small>Version 3</small></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -377,7 +379,7 @@
         <span class="tag">07 VERSIONS</span>
         <div class="inner">
             <span class="eyebrow">COMPATIBILITY</span>
-            <h2 class="sec">WordPress 5.8 から 7.1 まで</h2>
+            <h2 class="sec">WordPress 5.8 から 7.2 まで</h2>
             <p class="lead">theme.json の version 1〜3 に対応。エクスポートと生成では、選んだバージョンで使える設定だけを扱います。</p>
             <ol class="timeline">
                 <li>
@@ -390,13 +392,13 @@
                     <div class="dot"></div>
                     <div class="v">Version 2</div>
                     <div class="wp">WordPress 5.9+</div>
-                    <div class="adds">＋ スペーシング</div>
+                    <div class="adds">＋ フォントファミリー</div>
                 </li>
                 <li>
                     <div class="dot"></div>
                     <div class="v">Version 3</div>
                     <div class="wp">WordPress 6.6+</div>
-                    <div class="adds">＋ アクセントカラー・可変フォントサイズ</div>
+                    <div class="adds">＋ アクセントカラー・スペーシング・可変フォントサイズ</div>
                 </li>
                 <li>
                     <div class="dot"></div>
@@ -404,11 +406,17 @@
                     <div class="wp">WordPress 7.0+</div>
                     <div class="adds">＋ 角丸・ディメンション・textIndent</div>
                 </li>
-                <li class="now">
+                <li>
                     <div class="dot"></div>
                     <div class="v">Version 3</div>
                     <div class="wp">WordPress 7.1+</div>
                     <div class="adds">＋ ビューポート ほか</div>
+                </li>
+                <li class="now">
+                    <div class="dot"></div>
+                    <div class="v">Version 3</div>
+                    <div class="wp">WordPress 7.2+</div>
+                    <div class="adds">＋ テキストシャドウ・backgroundClip</div>
                     <span class="chip">最新・初期値</span>
                 </li>
             </ol>
@@ -525,11 +533,11 @@
                 </details>
                 <details>
                     <summary>ダークモードは扱えますか？</summary>
-                    <div class="a">Theme Colors コレクションの2つ目以降のモード（Dark など）を、スタイルバリエーション <code>styles/&lt;モード名&gt;.json</code> として theme.json と一緒に zip で書き出します。</div>
+                    <div class="a">Theme Colors コレクションの2つ目以降のモード（Dark など）を、スタイルバリエーション <code>styles/&lt;モード名&gt;.json</code> として theme.json と一緒に zip で書き出します（Version 3 を選んだとき）。</div>
                 </details>
                 <details>
                     <summary>どの WordPress バージョンに対応していますか？</summary>
-                    <div class="a">theme.json の version 1〜3（WordPress 5.8〜7.1）に対応しています。</div>
+                    <div class="a">theme.json の version 1〜3（WordPress 5.8〜7.2）に対応しています。</div>
                 </details>
                 <details>
                     <summary>vw や em で指定したフォントサイズは読み込めますか？</summary>
@@ -552,7 +560,7 @@
             <dt>仕様</dt>
             <dd>アコーディオン。最初の2問は開いた状態で表示。</dd>
             <dt>回答の根拠</dt>
-            <dd>上書き・単位・ダークモード・対応範囲は現行コード（v1.5.0）の挙動から記載。</dd>
+            <dd>上書き・単位・ダークモード・対応範囲は現行コード（v1.6.0）の挙動から記載。</dd>
             <dt>メモ</dt>
             <dd>問い合わせが多い質問が出てきたら追加。</dd>
         </dl>
@@ -566,6 +574,13 @@
             <h2 class="sec solo">更新履歴</h2>
             <div class="log">
                 <div class="log-item">
+                    <div class="ver">v1.6.0<span class="date">2026-11-20</span></div>
+                    <ul>
+                        <li>WordPress 7.2 に対応（テキストシャドウ ⇔ エフェクトスタイル、textShadow・backgroundClip の出力）</li>
+                        <li>Version 1 / 2 で、そのバージョンのスキーマにない設定を出力しないように修正</li>
+                    </ul>
+                </div>
+                <div class="log-item">
                     <div class="ver">v1.5.0<span class="date">2026-10-14</span></div>
                     <ul><li>英語に対応（プラグインの画面と通知。ヘッダーで日本語 / English を切り替え）</li></ul>
                 </div>
@@ -576,10 +591,6 @@
                         <li>スタイルバリエーション（styles/*.json）の zip 出力に対応</li>
                         <li>スラッグの保持、インポートのドラッグ＆ドロップ対応 ほか</li>
                     </ul>
-                </div>
-                <div class="log-item">
-                    <div class="ver">v1.3.0<span class="date">2026-09-26</span></div>
-                    <ul><li>WordPress 7.1 に対応</li></ul>
                 </div>
             </div>
             <div class="center"><a class="btn sm">すべての更新履歴</a></div>
