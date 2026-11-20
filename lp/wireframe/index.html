@@ -10,7 +10,7 @@
 
 <div class="toolbar" role="toolbar" aria-label="ワイヤー表示切替">
     <strong>LP ワイヤーフレーム</strong>
-    <span class="meta">WP theme-json Converter ／ v0.3 ／ 2026-11-20</span>
+    <span class="meta">WP theme-json Converter ／ v0.4 ／ 2026-11-21</span>
     <span class="spacer"></span>
     <div class="seg" aria-label="言語">
         <a href="index.html" data-lang-link aria-current="page">日本語</a>
@@ -35,7 +35,8 @@
                 <dt>ゴール</dt><dd>Figma Community のプラグインページへ送客 → インストール</dd>
                 <dt>主CTA</dt><dd>「Figma Community で入手する」（ヘッダー／FV／最終CTA の3か所）</dd>
                 <dt>料金</dt><dd>無料（FV・最終CTA のマイクロコピーと FAQ で明記）</dd>
-                <dt>公開URL</dt><dd>stella-create.co.jp/tools/wp-theme-json-converter/<br>英語版 …/wp-theme-json-converter/en/（スラッグは仮）</dd>
+                <dt>公開URL</dt><dd>stella-create.co.jp/tools/wp-theme-json-converter/<br>英語版 …/wp-theme-json-converter/en/</dd>
+                <dt>実装</dt><dd>静的 HTML。ヘッダー・フッターも LP 専用</dd>
                 <dt>言語</dt><dd>日本語・英語の2ページ。構成は共通（英語版ワイヤーは上部の English）</dd>
                 <dt>ターゲット</dt><dd>WordPress ブロックテーマを Figma でデザインするデザイナー・制作者、テーマ開発者</dd>
                 <dt>トーン</dt><dd>実務的・技術に明るい。誇張より「何がどう変換されるか」を正確に</dd>
@@ -86,8 +87,9 @@
             <dd>ナビ・言語切替はハンバーガーに格納。CTA ボタンはハンバーガー内＋FV に任せる。</dd>
             <dt>素材</dt>
             <dd>プラグインアイコン（高解像度版）</dd>
+            <dt>方針</dt>
+            <dd>LP 専用。コーポレートサイト（stella-create.co.jp）の共通ヘッダー・フッターは使わない。</dd>
         </dl>
-        <p class="todo">コーポレートサイト（stella-create.co.jp）の共通ヘッダー・フッターを使うか、LP 専用にするか</p>
     </aside>
     <aside class="note">
         <h3><b>02</b>ファーストビュー</h3>
@@ -302,7 +304,7 @@
                     <ul class="checks">
                         <li>カラーパレット・デュオトーン・フォントサイズ・レイアウト幅</li>
                         <li>version 2 からフォントファミリー、version 3 からスペーシングと可変フォントサイズ（Desktop / Mobile）も</li>
-                        <li>WordPress 6.9+ で角丸、7.0+ でディメンション、7.1+ でビューポート、7.2+ でテキストシャドウを追加</li>
+                        <li>WordPress 7.0+ で角丸・ディメンション、7.1+ でビューポート、7.2+ でテキストシャドウを追加</li>
                     </ul>
                 </div>
                 <div class="media">
@@ -350,7 +352,7 @@
                         <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>文字列バリアブル</td><td>Version 2〜</td></tr>
                         <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>数値バリアブル</td><td>Version 3〜</td></tr>
                         <tr><td><code>settings.layout.contentSize</code> / <code>wideSize</code></td><td>Theme Layout</td><td>数値バリアブル</td><td>すべて</td></tr>
-                        <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>数値バリアブル</td><td>WordPress 6.9+</td></tr>
+                        <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>数値バリアブル</td><td>WordPress 7.0+</td></tr>
                         <tr><td><code>settings.dimensions.dimensionSizes</code></td><td>Theme Dimensions</td><td>数値バリアブル</td><td>WordPress 7.0+</td></tr>
                         <tr><td><code>settings.viewport</code></td><td>Theme Viewport<br><small>mobile / tablet</small></td><td>数値バリアブル</td><td>WordPress 7.1+</td></tr>
                         <tr><td><code>settings.typography.textShadowPresets</code></td><td>Text Shadow/ 以下<br><small>ドロップシャドウ</small></td><td>エフェクトスタイル</td><td>WordPress 7.2+</td></tr>
@@ -371,7 +373,7 @@
             <dt>運用</dt>
             <dd>対応項目が増えたら README の How It Works と同時に更新。</dd>
         </dl>
-        <p class="todo">「対象バージョン」はプラグインのプリセット基準（現行コードで確認済み）。WordPress 本体での初出バージョンも併記するか</p>
+        <p>「対象バージョン」はプラグインのプリセット基準。WordPress 本体での初出バージョンは書かない（角丸の 6.9 のように、プリセットにないバージョンが混ざると選び方に迷うため）。</p>
     </aside>
 
     <!-- ========== 07 Versions ========== -->
@@ -470,9 +472,11 @@
             <dt>目的</dt>
             <dd>導入ハードルの低さを見せる。FV の副CTA「使い方を見る」の着地点。</dd>
             <dt>素材</dt>
-            <dd>各ステップの画像、デモ動画（YouTube 埋め込み or mp4 を自前ホスト）</dd>
+            <dd>各ステップの画像、デモ動画</dd>
+            <dt>デモ動画</dt>
+            <dd>作る（60〜90秒）。置き方は YouTube 埋め込みか、mp4 を LP と一緒に置くか。</dd>
         </dl>
-        <p class="todo">デモ動画を作るか（作らない場合はステップ画像のみで成立させる）</p>
+        <p class="todo">デモ動画の置き方（YouTube 埋め込み or mp4）</p>
     </aside>
 
     <!-- ========== 09 Use cases ========== -->
@@ -593,7 +597,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="center"><a class="btn sm">すべての更新履歴</a></div>
+            <div class="center"><a class="btn sm">すべての更新履歴（Figma Community）</a></div>
         </div>
     </section>
     <aside class="note">
@@ -602,9 +606,8 @@
             <dt>目的</dt>
             <dd>継続的にメンテされていることの証明（WP の新バージョンへの追従）。</dd>
             <dt>仕様</dt>
-            <dd>直近3件のみ要約表示。「すべて」は Figma Community の説明 or 別ページへ。</dd>
+            <dd>直近3件のみ要約表示。「すべての更新履歴」は Figma Community のプラグインページへリンク（説明文の Changelog。英語のみ）。</dd>
         </dl>
-        <p class="todo">「すべての更新履歴」のリンク先（別ページを作るか）</p>
     </aside>
 
     <!-- ========== 12 Final CTA ========== -->
@@ -641,8 +644,9 @@
         <dl>
             <dt>要素</dt>
             <dd>運営者ロゴ、Figma Community・お問い合わせ・プライバシーポリシーへのリンク、コピーライト。</dd>
+            <dt>リンク先</dt>
+            <dd>お問い合わせ・プライバシーポリシーはコーポレートサイト（stella-create.co.jp）の既存ページへ。フッター自体は LP 専用。</dd>
         </dl>
-        <p class="todo">運営者の表記、問い合わせ先・プライバシーポリシーのリンク先（コーポレートサイトの既存ページを使うか）</p>
     </aside>
 
 </div>

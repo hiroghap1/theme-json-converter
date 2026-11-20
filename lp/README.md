@@ -23,7 +23,8 @@ lp/
 | ゴール | Figma Community のプラグインページへ送客し、インストールしてもらう |
 | 主 CTA | 「Figma Community で入手する」/ “Get it free on Figma Community” → https://www.figma.com/community/plugin/1597529068216614729 |
 | 料金 | 無料（FV・最終 CTA・FAQ で明記） |
-| 公開 URL | 日本語 `https://stella-create.co.jp/tools/wp-theme-json-converter/`<br>英語 `https://stella-create.co.jp/tools/wp-theme-json-converter/en/`<br>※ `/tools/` 配下は確定、スラッグと英語版のパスは仮 |
+| 公開 URL | 日本語 `https://stella-create.co.jp/tools/wp-theme-json-converter/`<br>英語 `https://stella-create.co.jp/tools/wp-theme-json-converter/en/` |
+| 実装 | 静的 HTML。ヘッダー・フッターも LP 専用（コーポレートサイトの共通パーツは使わない） |
 | 言語 | 日本語・英語の2ページ。構成は共通、`hreflang` で相互参照 |
 | ターゲット | WordPress ブロックテーマを Figma でデザインするデザイナー・制作者、テーマ開発者（英語版は海外向け） |
 | トーン | 実務的。誇張より「何がどう変換されるか」を正確に伝える |
@@ -60,7 +61,7 @@ lp/
 | 5 | 使い方のステップ画像 | 3×日英 | 16:10 | 08 | 同上 |
 | 6 | ペルソナのイラスト | 3 | 正方形 | 09 | |
 | 7 | OGP 画像（日・英） | 2 | 1200×630 | meta | |
-| 8 | デモ動画 | 任意 | 16:9、60〜90秒 | 08 | 作るかは未定 |
+| 8 | デモ動画 | 1 | 16:9、60〜90秒 | 08 | インポート → 編集 → エクスポートの流れ。置き方（YouTube / mp4）と英語版（字幕 / 別撮り）は未定 |
 
 FV の図解（02）、zip の中身と出力 JSON の抜粋（05）は HTML/CSS とテキストで組むため、画像は不要です。
 
@@ -69,7 +70,7 @@ FV の図解（02）、zip の中身と出力 JSON の抜粋（05）は HTML/CSS
 1. **ワイヤー**（今ここ）: 構成・情報量・コピー案を固める
 2. **デザイン**: 配色・タイポグラフィ・ビジュアル。プラグイン UI の WordPress ブルー（`#0073aa`）を起点にするかを決める
 3. **画像の支給**: 上記「画像リスト」
-4. **実装**: 日英2ページ
+4. **実装**: 静的 HTML で日英2ページ
 5. **公開**: stella-create.co.jp/tools/ 配下に設置
 
 ## 要確認事項
@@ -78,15 +79,17 @@ FV の図解（02）、zip の中身と出力 JSON の抜粋（05）は HTML/CSS
 - [x] 公開先 → stella-create.co.jp/tools/ 配下
 - [x] 英語版 → 作る
 - [x] スクリーンショットなどの画像 → 支給
-- [ ] スラッグ（`wp-theme-json-converter`）と英語版のパス（`…/en/`）
-- [ ] コーポレートサイトの共通ヘッダー・フッターを使うか、LP 専用にするか
-- [ ] 実装方式（コーポレートサイトの CMS に載せるか、静的 HTML を置くか）
+- [x] スラッグ（`wp-theme-json-converter`）と英語版のパス（`…/en/`） → このまま確定
+- [x] コーポレートサイトの共通ヘッダー・フッターを使うか、LP 専用にするか → LP 専用
+- [x] 実装方式（コーポレートサイトの CMS に載せるか、静的 HTML を置くか） → 静的 HTML
 - [x] 英語版のスクリーンショット → プラグイン UI を英語化してから撮る（v1.5.0 で英語化）
 - [x] Figma Community の説明文 → 英語（更新履歴も英訳済み）
 - [x] 更新履歴の英訳 → 英語版 LP は Figma Community 説明文の英語の Changelog を使う
-- [ ] デモ動画を作るか
-- [ ] 運営者の表記（英字の正式表記）、問い合わせ・プライバシーポリシーのリンク先（英語ページの有無）
-- [ ] 「すべての更新履歴」のリンク先
+- [x] デモ動画を作るか → 作る
+- [ ] デモ動画の置き方（YouTube 埋め込み or mp4）と英語版（英語字幕 or 英語 UI で別撮り）
+- [x] 運営者の表記（英字の正式表記）、問い合わせ・プライバシーポリシーのリンク先（英語ページの有無） → どちらもない。英語版は「Stella Create」と表記し、日本語ページへ「(in Japanese)」を添えてリンク
+- [x] 「すべての更新履歴」のリンク先 → Figma Community のプラグインページ
+- [x] 変換対応表に WordPress 本体での初出バージョンを書くか → 書かない（プリセット基準のみ）
 
 ## 運用メモ
 

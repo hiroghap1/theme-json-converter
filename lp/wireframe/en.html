@@ -10,7 +10,7 @@
 
 <div class="toolbar" role="toolbar" aria-label="ワイヤー表示切替" lang="ja">
     <strong>LP ワイヤーフレーム（英語版）</strong>
-    <span class="meta">WP theme-json Converter ／ v0.3 ／ 2026-11-20</span>
+    <span class="meta">WP theme-json Converter ／ v0.4 ／ 2026-11-21</span>
     <span class="spacer"></span>
     <div class="seg" aria-label="言語">
         <a href="index.html" data-lang-link>日本語</a>
@@ -32,7 +32,8 @@
             <h1>WP theme-json Converter ― LP 構成案（英語版）</h1>
             <p>構成・仕様は日本語版と同じです。付箋には英語版で異なる点だけを書いています。コピーはすべて仮。</p>
             <dl>
-                <dt>公開URL</dt><dd>stella-create.co.jp/tools/wp-theme-json-converter/en/（スラッグは仮）</dd>
+                <dt>公開URL</dt><dd>stella-create.co.jp/tools/wp-theme-json-converter/en/</dd>
+                <dt>実装</dt><dd>静的 HTML。ヘッダー・フッターも LP 専用</dd>
                 <dt>主CTA</dt><dd>“Get it free on Figma Community”（ヘッダー／FV／最終CTA）</dd>
                 <dt>ターゲット</dt><dd>海外の WordPress ブロックテーマ制作者・デザイナー</dd>
                 <dt>コピー方針</dt><dd>日本語版の直訳ではなく、Figma Community の英語説明文とトーン・用語をそろえる</dd>
@@ -268,7 +269,7 @@
                     <ul class="checks">
                         <li>Color palette, duotone, font sizes and layout widths</li>
                         <li>Font families from version 2; spacing and fluid font sizes (Desktop / Mobile) from version 3</li>
-                        <li>Border radius on WordPress 6.9+, dimensions on 7.0+, viewport on 7.1+, text shadows on 7.2+</li>
+                        <li>Border radius and dimensions on WordPress 7.0+, viewport on 7.1+, text shadows on 7.2+</li>
                     </ul>
                 </div>
                 <div class="media">
@@ -306,7 +307,7 @@
                         <tr><td><code>settings.typography.fontFamilies</code></td><td>Theme Font Families</td><td>String variable</td><td>Version 2+</td></tr>
                         <tr><td><code>settings.spacing.spacingSizes</code></td><td>Theme Spacing</td><td>Number variable</td><td>Version 3+</td></tr>
                         <tr><td><code>settings.layout.contentSize</code> / <code>wideSize</code></td><td>Theme Layout</td><td>Number variable</td><td>All</td></tr>
-                        <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>Number variable</td><td>WordPress 6.9+</td></tr>
+                        <tr><td><code>settings.border.radiusSizes</code></td><td>Theme Radius</td><td>Number variable</td><td>WordPress 7.0+</td></tr>
                         <tr><td><code>settings.dimensions.dimensionSizes</code></td><td>Theme Dimensions</td><td>Number variable</td><td>WordPress 7.0+</td></tr>
                         <tr><td><code>settings.viewport</code></td><td>Theme Viewport<br><small>mobile / tablet</small></td><td>Number variable</td><td>WordPress 7.1+</td></tr>
                         <tr><td><code>settings.typography.textShadowPresets</code></td><td>Under Text Shadow/<br><small>Drop shadows</small></td><td>Effect style</td><td>WordPress 7.2+</td></tr>
@@ -403,8 +404,9 @@
             <dt>UI 表記とのずれ</dt>
             <dd>本文は Import / Export / Generate だが、STEP 2 の画像に写るタブ名は「インポート／エクスポート／生成」。05 の画像方針とあわせて決める。</dd>
             <dt>デモ動画</dt>
-            <dd>作る場合は英語字幕を付けるか、英語版を別撮り。</dd>
+            <dd>作る。英語版は英語字幕を付けるか、英語 UI で別撮りするか。</dd>
         </dl>
+        <p class="todo">デモ動画の英語版（英語字幕 or 英語 UI で別撮り）</p>
     </aside>
 
     <!-- ========== 09 Use cases ========== -->
@@ -505,7 +507,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="center"><a class="btn sm">Full changelog</a></div>
+            <div class="center"><a class="btn sm">Full changelog on Figma Community</a></div>
         </div>
     </section>
     <aside class="note" lang="ja">
@@ -513,6 +515,8 @@
         <dl>
             <dt>出典</dt>
             <dd>Figma Community 説明文（<code>figma-community-description.md</code>）の英語の Changelog から直近3件。README の Changelog は日本語。</dd>
+            <dt>リンク先</dt>
+            <dd>「Full changelog」は Figma Community のプラグインページへ（日本語版と同じ）。</dd>
         </dl>
     </aside>
 
@@ -531,7 +535,7 @@
         <span class="tag">13 FOOTER</span>
         <div class="ftr ftr-wrap">
             <div class="logo"><div class="ph icon"><span>logo</span></div>Stella Create</div>
-            <nav><span>Figma Community</span><span>Contact</span><span>Privacy Policy</span></nav>
+            <nav><span>Figma Community</span><span>Contact (in Japanese)</span><span>Privacy Policy (in Japanese)</span></nav>
             <div class="copy">© 2026 Stella Create</div>
         </div>
     </section>
@@ -539,9 +543,10 @@
         <h3><b>13</b>フッター</h3>
         <dl>
             <dt>運営者表記</dt>
-            <dd>英字表記はドメイン（stella-create.co.jp）から「Stella Create」と仮置き。</dd>
+            <dd>英字の正式表記はないので、ドメイン（stella-create.co.jp）に合わせて「Stella Create」。</dd>
+            <dt>リンク先</dt>
+            <dd>英語ページはないので、お問い合わせ・プライバシーポリシーは日本語ページへリンクし、「(in Japanese)」を添える。</dd>
         </dl>
-        <p class="todo">英字の正式表記。問い合わせ・プライバシーポリシーの英語ページがあるか（なければ日本語ページへリンクするか）</p>
     </aside>
 
 </div>
